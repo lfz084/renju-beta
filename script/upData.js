@@ -2,7 +2,11 @@
 window.upData = window.top.upData || (function() {
     'use strict';
 	const DEBUG_UPDATA = false;
-    const mlog = self["mlog"] || console.warn;
+    
+    function log(param, type = "log") {
+    	const print =  self["mlog"] && ((p) => {self["mlog"](p, type)}) || console.log;
+    	DEBUG_UPDATA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+    }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
     const elements = document.getElementsByTagName("version");
@@ -22,9 +26,7 @@ window.upData = window.top.upData || (function() {
     			try {
     				key = key.toString();
     				value = value.toString();
-    				const myHeaders = { "Content-Type": 'text/html; charset=utf-8' };
-    				const init = { status: 200, statusText: "OK", headers: myHeaders };
-    				caches.open("settings").then(cache => cache.put(new Request(key), new Response(value, init))).then(() => resolve(value)).catch(() => resolve());
+    				caches.open("settings").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
     			} catch (e) { resolve() }
     		});
     	}
@@ -95,7 +97,7 @@ window.upData = window.top.upData || (function() {
             cacheNames && cacheNames.map(cacheName => {
             	if(filter(cacheName)) {
             		caches.delete(cacheName)
-            		mlog(`delete cache: ${cacheName}`, "info")
+            		log(`delete cache: ${cacheName}`, "info")
             	}
             })
         }
@@ -136,7 +138,8 @@ window.upData = window.top.upData || (function() {
 
     async function logCache(cacheName, urls = []) {
         if ("caches" in window) {
-            let cs = `_____________________\n`;
+            let cacheInfo = {};
+            let num = 0;
             const cache = await caches.open(cacheName);
             const keys = cache ? await cache.keys() : [];
             urls = urls.map(url => decodeURIComponent(absoluteURL(url)));
@@ -144,37 +147,36 @@ window.upData = window.top.upData || (function() {
             	typeof self.warn == "function" && warn(`️⚠ ️缓存异常 不能离线运行 刷新一下吧!`);
             	console.error(`upData.js: caches.open(${cacheName}).cache.keys().length == 0`)
             }
-            cs += `______ [${cacheName}]  ${keys.length} / ${urls.length} 个文件 ______\n\n`
+            cacheInfo[` [${cacheName}]`] = `${keys.length} / ${urls.length} 个文件 ______`;
             keys.forEach(request => {
             	const url = decodeURIComponent(request.url);
             	const index = urls.indexOf(url.replace(/\?v\=v[0-9]+\.*[0-9]*/i, ""));
             	index + 1 && urls.splice(index, 1);
-            	cs += `${index + 1?"===":"+++"}\t${url.split("/").pop()}\n`;
+            	cacheInfo[`000${++num}`.slice(-3)] = `${index + 1?"===":"+++"}\t${url.split("/").pop()}`;
             });
-            urls.map(url => cs += `---${url}\n`);
-            cs += `_____________________\n`;
-            return cs;
+            urls.map(url => cacheInfo[`000${++num}`.slice(-3)] = `---${url}`);
+            return cacheInfo;
         }
-        return `"caches" in window === ${false}`;
+        return `"caches" in window === false`;
     }
 
     async function logCaches(urls) {
         if ("caches" in window) {
-            let cs = `_____________________\n`;
+            let cachesInfo = {};
+            let cacheInfo = {};
             const cachesNames = await caches.keys();
             if (cachesNames.length == 0) {
             	typeof self.warn == "function" && warn(`️⚠ ️缓存异常 不能离线运行 刷新一下吧!`);
             	console.error(`upData.js: caches.keys().length == 0`)
             }
-            cs += `________ 离线缓存 ${cachesNames.length}个 ________\n\n`
+            cachesInfo[`离线缓存 ${cachesNames.length} 个`] = cacheInfo;
             for (let index in cachesNames) {
             	const cacheName = cachesNames[index];
-            	cs += `.\t[${cacheName}]\n${await logCache(cacheName, (/v\d+\.*\d*/i).test(cacheName) ? urls : undefined)}\n`;
+            	cacheInfo[cacheName] = await logCache(cacheName, (/v\d+\.*\d*/i).test(cacheName) ? urls : undefined);
             }
-            cs += `_____________________\n`;
-            return cs;
+            return cachesInfo;
         }
-        return `"caches" in window === ${false}`;
+        return `"caches" in window === false`;
     }
 
     function logVersions() {
@@ -190,7 +192,7 @@ window.upData = window.top.upData || (function() {
 
     async function checkScriptVersion(filename) {
         const ver = window.SCRIPT_VERSIONS[filename];
-        mlog(`checkScriptVersion [${[filename, ver || "undefined"]}]`, "info");
+        log(`checkScriptVersion [${[filename, ver || "undefined"]}]`, "info");
         if (ver && (ver != currentVersion)) {
             const ERR = `reload`;
             const ASK = `版本号不一致，可能影响正常运行\n_____________________\n\n${strLen("主页", 25)}版本号: ${currentVersion} \n${strLen(filename + ".js", 25)}版本号: ${window.SCRIPT_VERSIONS[filename]} \n_____________________\n\n`;
@@ -207,7 +209,7 @@ window.upData = window.top.upData || (function() {
     }
 
     async function checkAppVersion() {
-        mlog(`checkAppVersion {currentVersion: ${currentVersion}, htmlVersion: ${htmlVersion}}`, "info")
+        log(`checkAppVersion {currentVersion: ${currentVersion}, htmlVersion: ${htmlVersion}}`, "info")
         if ("localStorage" in window) {
             const ASK = `有新的更新\n\n 当前版本号: ${currentVersion} \n 新的版本号: ${htmlVersion}\n${logVersionInfo(htmlVersion)}\n`;
             const PS = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
@@ -250,11 +252,11 @@ window.upData = window.top.upData || (function() {
                 function onmessage(event) {
                 	const MSG = event.data;
                 	if (typeof MSG == "object" && MSG.cmd == "NEW_VERSION" && MSG.version == newVersion) {
-                		mlog(`serviceWorker.onmessage: NEW_VERSION = ${MSG.version}, oldVersion: ${MSG.oldVersion}`, "info");
+                		log(`serviceWorker.onmessage: NEW_VERSION = ${MSG.version}, oldVersion: ${MSG.oldVersion}`, "info");
                 		rm();
                 	}
                 	else {
-                		mlog(`serviceWorker.onmessage: ${JSON.stringify(MSG)}`, "info");
+                		log(`serviceWorker.onmessage: ${JSON.stringify(MSG)}`, "info");
                 	}
                 }
 
@@ -265,9 +267,9 @@ window.upData = window.top.upData || (function() {
                 }
             	navigator.serviceWorker.addEventListener("message", onmessage);
                 navigator.serviceWorker.controller.postMessage({ cmd: "NEW_VERSION", version: newVersion });
-                mlog(`upData.postVersion: ${newVersion}`, "info");
+                log(`upData.postVersion: ${newVersion}`, "info");
                 timer = setTimeout(() => {
-                    mlog("postVersion Timeout", "error");
+                    log("postVersion Timeout", "error");
                     rm();
                 }, 3 * 1000);
             }
@@ -330,7 +332,7 @@ window.upData = window.top.upData || (function() {
             async function upEnd(e) {
                 if (typeof e.data == "object" && e.data.cmd == "upData") {
                     if (e.data.ok) {
-                        console.warn(`更新完成 ${e.data.version}`)
+                        console.info(`更新完成 ${e.data.version}`)
                         resetUpdataVersion();
                         await removeOldAppCache();
                         resolve(true);
@@ -454,12 +456,12 @@ window.upData = window.top.upData || (function() {
     }
     
     async function loadCache(cache, url) {
-    	DEBUG_UPDATA && console.log(`upData.js: loadCache ${url}`)
+    	log(`upData.js: loadCache ${url}`)
     	return await cache.match(new Request(url, myInit));
     }
     
     async function putCache(cache, url, response) {
-    	DEBUG_UPDATA && console.log(`upData.js: putCache ${url}`)
+    	log(`upData.js: putCache ${url}`)
     	return await cache.put(new Request(url, myInit), response)
     }
     
@@ -481,7 +483,7 @@ window.upData = window.top.upData || (function() {
     	if(!checkServiceWorkerAndCaches()) return;
     	const response = await loadCache(cache, url);
     	if (response) {
-    		DEBUG_UPDATA && console.info(`upData.js: saveCacheFile loaded "${url}" in cache ${version}`)
+    		log(`upData.js: saveCacheFile loaded "${url}" in cache ${version}`, "info")
     		return 2;
     	}
     	else {
@@ -519,7 +521,7 @@ window.upData = window.top.upData || (function() {
     	}
     	await Promise.all(ps);
     	
-    	console[errUrls.length ? "error" : "warn"](`upData.js: saveCacheFiles finish ${errUrls.length} error in ${numFiles} urls \n${errUrls.join("\n")}`)
+    	console[errUrls.length ? "error" : "info"](`upData.js: saveCacheFiles finish ${errUrls.length} error in ${numFiles} urls \n${errUrls.join("\n")}`)
     	window.loadAnimation && (loadAnimation.lock(false),loadAnimation.close());
     }
 

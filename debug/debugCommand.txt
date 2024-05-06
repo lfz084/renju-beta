@@ -404,6 +404,11 @@ console.log(s)
     }[key];
     getResponse
     
+    const htmlScript = '<script>\n  var _hmt=_hmt||[];\n  (function(){\n    var hm=document.createElement("script");\n    hm.src="https://hm.baidu.com/hm.js?c17b8a02edb4aff101e8b42ed01aca1b";\n    var s=document.getElementsByTagName("script")[0];\n    s.parentNode.insertBefore(hm,s)\n  })();\n</script>'
+    upData.fetchTXT("index.html").then(html => html.replace(new RegExp("\<head\>", "i"),"<head>\n" + htmlScript + "\n")).then(console.log)
+    
+    fetch("index.html").then(response => console.log(response.type))
+    
     
     
         		

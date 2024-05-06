@@ -2,6 +2,14 @@
     (global = global || self, factory(global));
 }(this, (function(exports) {
     'use strict';
+    const TEST_LOADFILE = false;
+    
+    function log(param, type = "log") {
+        const print = console[type] || console.log;
+        TEST_LOADFILE && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+    }
+
+    //------------------------ loadFont ------------------
 
     Promise.queue = function(thenables) { // 顺序执行 thenable
         return new Promise((resolve, reject) => {
@@ -43,7 +51,7 @@
     function loadCss(url) { //加载css
         url = formatURL(url);
         const filename = getFileName(url);
-        console.log(`loadFile: loadCss("${url}")`)
+        log(`loadFile: loadCss("${url}")`)
     	return new Promise((resolve, reject) => {
             const head = document.getElementsByTagName('head')[0];
             const link = document.createElement('link');
@@ -59,7 +67,7 @@
     function loadFile(url, responseType = "text") { //加载文件
         url = formatURL(url);
         const filename = getFileName(url);
-        console.log(`loadFile: loadFile("${url}", "${responseType}")`)
+        log(`loadFile: loadFile("${url}", "${responseType}")`)
     	return new Promise((resolve, reject) => {
             const oReq = new XMLHttpRequest();
             oReq.responseType = responseType;
@@ -85,7 +93,7 @@
     function loadScript(url) { //加载脚本
         url = formatURL(url);
         const filename = getFileName(url);
-        console.log(`loadFile: loadScript("${url}")`)
+        log(`loadFile: loadScript("${url}")`)
     	return new Promise((resolve, reject) => {
             const oHead = document.getElementsByTagName('HEAD').item(0);
                 const oScript = document.createElement("script");
@@ -158,7 +166,7 @@
     }
 
     function loadAll(loadFun, config, ayc = false) {
-        console.info(`\n---------- loadFile: loadAll --------\nfunction: ${loadFun.name}All\nasync: ${ayc}\n\t${config.map(u => `url = "${u}"`).join("\n\t")}\n------------------\n`)
+        log(`\n---------- loadFile: loadAll --------\nfunction: ${loadFun.name}All\nasync: ${ayc}\n\t${config.map(u => `url = "${u}"`).join("\n\t")}\n------------------\n`, "info")
         const thenables = createThenables(loadFun, config);
         if (ayc) {
             let ps = [];
@@ -199,7 +207,7 @@
             window.loadAnimation && (loadAnimation.open(), loadAnimation.lock(true));
             let source;
             while (source = sources.shift()) {
-                window.loadAnimation && (loadAnimation.text(source.progress), console.log(`progress: ${source.progress}`));
+                window.loadAnimation && (loadAnimation.text(source.progress), log(`progress: ${source.progress}`));
                 await fun[source.type](source.sources, source.isAsync);
             }
             window.loadAnimation && (loadAnimation.lock(false), loadAnimation.close());

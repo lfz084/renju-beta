@@ -4,7 +4,7 @@
     
     function log(param, type = "log") {
         const  print = window.top.console[type] || window.top.console.log;
-        TEST_HELP && window.top.DEBUG && print(`[help.js]\n>>  ${ param}`);
+        TEST_HELP && window.top.DEBUG && window.top.vConsole && print(`[help.js]\n>>  ${ param}`);
     }
     
     const topImage = (() => {

@@ -9,7 +9,7 @@ window.loadApp = (() => { // 按顺序加载应用
 
     function log(param, type = "log") {
         const print = console[type] || console.log;
-        if (TEST_LOADAPP && window.DEBUG) {
+    	if (TEST_LOADAPP && window.DEBUG && (window.vConsole || window.parent.vConsole)) {
             const MSG = `${param}`;
             print(`[loadApp.js]\n>>  ${MSG}`);
             "mlog" in window && typeof mlog == "function" && mlog(MSG);
@@ -40,10 +40,12 @@ window.loadApp = (() => { // 按顺序加载应用
     function logTestBrowser() {
         let Msg = "";
         Msg += `__________ logTestBrowser ___________\n\n `;
-        Msg += `Worker: ${"Worker" in window}\n`;
-        Msg += `caches: ${"caches" in window}\n`;
-        Msg += `serviceWorker: ${"serviceWorker" in navigator}\n`;
+        Msg += `fullscreenEnabled: ${document.fullscreenEnabled}\n`;
         Msg += `localStorage: ${"localStorage" in window}\n`;
+        Msg += `caches: ${"caches" in window}\n`;
+        Msg += `Worker: ${"Worker" in window}\n`;
+        Msg += `serviceWorker: ${"serviceWorker" in navigator}\n`;
+        Msg += `indexedDB: ${"indexedDB" in window}\n`;
         Msg += `msSaveOrOpenBlob in navigator: ${"msSaveOrOpenBlob" in navigator}\n`;
         Msg += `download in HTMLAnchorElement.prototype: ${"download"  in HTMLAnchorElement.prototype}\n`;
         Msg += `_____________________\n\n `;
@@ -79,9 +81,13 @@ window.loadApp = (() => { // 按顺序加载应用
     window.openVconsole = function (open) {
     	const IS_DEBUG = open ? "true" : localStorage.getItem("debug");
     	if (isTopWindow && IS_DEBUG == "true") {
+    		console.info("openVconsole...");
     		localStorage.setItem("debug", true);
-    		if (vConsole == null) {vConsole = new VConsole();}
-    		//console.log(new Array(128).fill("---- reset vConsole touch ----").join("\n"))
+    		if (vConsole == null) {
+    			vConsole = new VConsole();
+    			console.log("VConsole 已经打开");
+    		}
+    		else console.log("VConsole 已经打开，不需要重复打开");
     		return vConsole;
     	}
     }
@@ -179,9 +185,7 @@ window.loadApp = (() => { // 按顺序加载应用
     	openSwitch == openVconsoleSwitch.FAST_SMALL && fullscreenEnabled && openVconsole();
     	openSwitch == openVconsoleSwitch.DELAY_LARGE && !fullscreenEnabled && window.parent.openVconsole();
 		
-		console.info(`isTopWindow: ${isTopWindow}`)
-    	console.info(`fullscreenEnabled: ${fullscreenEnabled}`)
-    	console.info(logTestBrowser());
+		console.info(logTestBrowser());
     	
         window.SOURCE_FILES = window.SOURCE_FILES || await loadJSON("Version/SOURCE_FILES.json");
         window.UPDATA_INFO = await loadJSON("Version/UPDATA_INFO.json");
@@ -217,7 +221,7 @@ window.loadApp = (() => { // 按顺序加载应用
 				isAsync: true,
 				sources: [[SOURCE_FILES["loaders"]],
 				[SOURCE_FILES["main"]]]
-			}, {
+			},{
 				progress: "5%",
 				type: "fontAll",
 				isAsync: true,
@@ -276,6 +280,7 @@ window.loadApp = (() => { // 按顺序加载应用
         if ("fullscreenUI" in self) {
         	mlog(`fullscreenUI.src = ${window.location.href}`, "warn")
         	fullscreenUI.src = window.location.href;
+        	openSwitch == openVconsoleSwitch.FAST_SMALL && fullscreenUI.viewport.userScalable();
         	return;
         }
         
@@ -303,8 +308,9 @@ window.loadApp = (() => { // 按顺序加载应用
                 	callCancel: () => { window.open("./help/renjuhelp/versionHistory.html", "helpWindow") }
         	})
         }
+        
         console.info(`logCaches`)
-        console.info(await upData.logCaches(Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])));
+        vConsole && console.info(await upData.logCaches(Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])));
         console.info(upData.logVersions());
         
         if (window.mainUI && upData.isCheckVersion()) {

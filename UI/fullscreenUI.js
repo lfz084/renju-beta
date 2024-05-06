@@ -453,8 +453,6 @@ window.fullscreenUI = (() => {
 		function getThemeName() {
 			return localStorage.getItem("theme");
 		}
-		
-		//viewport.userScalable();
 
 		//----------------------------------------------------------------------------------
 
@@ -465,6 +463,7 @@ window.fullscreenUI = (() => {
 			get iframe() { return IFRAME },
 			get contentWindow() { return IFRAME.contentWindow },
 			get src() { return IFRAME.src; },
+			get viewport() { return viewport },
 			set src(url) { return toURL(url); },
 		}
 	} catch (e) { alert(e.stack) }

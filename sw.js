@@ -57,9 +57,7 @@
     		try {
     			key = key.toString();
     			value = value.toString();
-    			const myHeaders = { "Content-Type": 'text/html; charset=utf-8' };
-    			const init = { status: 200, statusText: "OK", headers: myHeaders };
-    			caches.open("settings").then(cache => cache.put(new Request(key), new Response(value, init))).then(() => resolve(value)).catch(() => resolve());
+    			caches.open("settings").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
     		} catch (e) { resolve() }
     	});
     }
@@ -268,6 +266,26 @@
     	})
     }
     
+    //-------------------- add HTML code -------------------- 
+
+    const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?bed4a8b88511e0724ea14c479e20c9b5";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
+    async function addHTMLCode(response) {
+    	const myHeaders = { "Content-Type": 'text/html; charset=utf-8' };
+    	const init = {
+    		status: 200,
+    		statusText: "OK",
+    		headers: myHeaders
+    	}
+    	if (/\.html$|\.htm$/i.test(response.url.split("?")[0].split("#")[0])) {
+    		return response.text()
+    			.then(html => {
+    				return html.indexOf(tongjihtmlScript) + 1 ? html : html.replace(new RegExp("\<\/head\>", "i"), tongjihtmlScript + "\n<head>")
+    			})
+    			.then(html => new Response(html, init))
+    	}
+    	else return response;
+    }
+    
     //-------------------- addEventListener -------------------- 
 
     // 缓存
@@ -303,7 +321,8 @@
     			"?cache=cacheFirst": cacheFirst,
     			"default": cacheFirst
     		}[key];
-    		return waitResponse(_URL, cacheVersion, event.clientID);
+    		return waitResponse(_URL, cacheVersion, event.clientID)
+    			.then(response => addHTMLCode(response));
     	}));
     });
     

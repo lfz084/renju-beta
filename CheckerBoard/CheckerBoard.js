@@ -4,7 +4,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
 }(this, (function(exports) {
     'use strict';
 
-    const TEST_CHECKER_BOARD = true;
+    const TEST_CHECKER_BOARD = false;
     const TYPE_EMPTY = 0;
     const TYPE_MARK = 1 << 4; // 标记
     const TYPE_MOVE = TYPE_MARK | 1; //VCF手顺
@@ -62,7 +62,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
 
     function log(param, type = "log") {
         const print = console[type] || console.log;
-        TEST_CHECKER_BOARD && window.DEBUG && print(`[CheckerBoard.js]\n>>  ${ param}`);
+        TEST_CHECKER_BOARD && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
     }
 
     //------------------------ loadFont ------------------
@@ -620,7 +620,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
     	this.P[idx].type = type;
     	const { x, y, radius, color, lineWidth } = this.getBoardPointInfo(idx, false).circle;
     	this.P[idx].type = oldType;
-    	console.log(`${this.firstColor}\n${this.MS.slice(0,this.MSindex+1)}\n${this.MS.slice(0)}`)
+    	log(`${this.firstColor}\n${this.MS.slice(0,this.MSindex+1)}\n${this.MS.slice(0)}`)
     	const fill =[this.bNumColor, this.wNumColor][(this.MSindex + (this.firstColor=="black"?1:2)) % 2]
     	Object.assign(this.stoneDiv.style, {
     		position: "absolute",
@@ -1933,11 +1933,11 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
         points.map(idx => {
         	// 棋谱坐标转成 index 后添加棋子
             if (sourceType == TYPE_NUMBER) {
-                //console.log(`unpackCodeType sourceType == TYPE_NUMBER`);
+                log(`unpackCodeType sourceType == TYPE_NUMBER`);
                 this.wNb(idx, "auto", showNum, undefined, undefined, 100);
             }
             else if (sourceType == TYPE_BLACK) {
-                //console.log(`unpackCodeType sourceType == TYPE_BLACK`);
+                log(`unpackCodeType sourceType == TYPE_BLACK`);
                 switch (targetType) {
                     case TYPE_NUMBER:
                         if (0 == (this.MSindex & 1)) this.wNb(225, "auto", showNum, undefined, undefined, 100);
@@ -1949,7 +1949,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
                 }
             }
             else if (sourceType == TYPE_WHITE) {
-                //console.log(`unpackCodeType sourceType == TYPE_WHITE`);
+                log(`unpackCodeType sourceType == TYPE_WHITE`);
                 switch (targetType) {
                     case TYPE_NUMBER:
                         if (1 == (this.MSindex & 1)) this.wNb(225, "auto", showNum, undefined, undefined, 100);

@@ -1,11 +1,11 @@
 window.DBClient = (() => {
     "use strict";
-    //console.log(exports);
+    
     const TEST_DBClient = false;
 
     function log(param, type = "log") {
         const  print = console[type] || console.log;
-        TEST_DBClient && window.DEBUG && print(`[RenjuLib.js]\n>>  ${ param}`);
+        TEST_DBClient && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js]\n>>  ${ param}`);
     }
     
     //----------------------------------------------------------

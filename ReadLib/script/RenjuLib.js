@@ -1,11 +1,11 @@
 window.RenjuLib = (() => {
     "use strict";
-    //console.log(exports);
+    
     const TEST_RENLIB = false;
 
     function log(param, type = "log") {
         const  print = console[type] || console.log;
-        TEST_RENLIB && window.DEBUG && print(`[RenjuLib.js]\n>>  ${ param}`);
+        TEST_RENLIB && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js]\n>>  ${ param}`);
     }
 
     let url = "./ReadLib/script/RenjuLib_worker.js",
@@ -58,7 +58,7 @@ window.RenjuLib = (() => {
         /*
         pushBoardText: function(data) {
         	boardTextArray.push(data);
-        	console.log(data)
+        	log(data)
         }
         */
     };
@@ -202,9 +202,8 @@ window.RenjuLib = (() => {
             innerHTML = data.innerHTML,
             nextMove = { idx: -1, level: -2 },
             level = ["l", "L", "c", "c5", "c4", "c3", "c2", "c1", "w", "W", "a", "a5", "a4", "a3", "a2", "a1"];
-        //log(data)
         if (!isEqual(data.position, cBoard.getArray2D())) return;
-        //console.info(data.nodes)
+        log(data.nodes, "info");
         cBoard.cleLb("all");
         for (let i = 0; i < nodes.length; i++) {
             if (cBoard.nextColor() === 2 || !isFoul(nodes[i].idx, data.position)) {

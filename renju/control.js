@@ -1,11 +1,11 @@
 window.control = (() => {
 	try {
 		"use strict";
-		const TEST_CONTROL = true;
+		const TEST_CONTROL = false;
 
 		function log(param, type = "log") {
 			const print = console[type] || console.log;
-			TEST_CONTROL && window.DEBUG && print(`[control.js]\n>>  ${ param}`);
+			TEST_CONTROL && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[control.js]\n>>  ${ param}`);
 		}
 
 		//--------------------------------------------------------------

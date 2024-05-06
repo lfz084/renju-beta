@@ -1,7 +1,7 @@
 window.serviceWorker = window.top.serviceWorker || (() => {
     "use strict";
 
-    const TEST_SERVER_WORKER = true;
+    const TEST_SERVER_WORKER = false;
     const scriptURL = './sw.js';
     let serviceWorker_state;
     
@@ -10,8 +10,8 @@ window.serviceWorker = window.top.serviceWorker || (() => {
     }
     
     function onmessage(event) {
-    	if (event.data.toString().indexOf("load") + 1) return;
-    	TEST_SERVER_WORKER && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,100)}`);
+    	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) return;
+    	TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,100)}`);
     	if (event.data && event.data.cmd == "alert") alert(event.data.msg);
     }
     
