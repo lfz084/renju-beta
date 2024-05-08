@@ -1305,19 +1305,19 @@ window.control = (() => {
 				}
 			}
 			else if (msgStr.indexOf("debug") > -1) {
-				vConsole = window.top.openVconsole(true)
+				window.parent.openVconsole(true).then(v => vConsole = v)
 				return;
 			}
 			else if (msgStr.indexOf("close") > -1) {
-				vConsole = window.top.closeVconsole()
+				vConsole && (vConsole = window.parent.closeVconsole());
 				return;
 			}
 			else if (msgStr.indexOf("showSwitch") > -1) {
-				vConsole.showSwitch()
+				vConsole && vConsole.showSwitch();
 				return;
 			}
 			else if (msgStr.indexOf("hideSwitch") > -1) {
-				vConsole.hideSwitch()
+				vConsole && vConsole.hideSwitch();
 				return;
 			}
 			else if (msgStr.indexOf("offline") > -1 || msgStr.indexOf("icon") > -1) {
@@ -1924,7 +1924,7 @@ window.control = (() => {
 			return cSelBlack.checked ? 1 : 2;
 		}
 
-		let timerCancelKeepTouch = null; // 防止悔棋触发取消红色显示
+		var timerCancelKeepTouch = null; // 防止悔棋触发取消红色显示
 
 		function cancelKeepTouch() {
 			if (timerCancelKeepTouch) return true;

@@ -6,7 +6,16 @@ window.serviceWorker = window.top.serviceWorker || (() => {
     let serviceWorker_state;
     
     function updatefound() {
-    	const registration = event.target;
+    	function search() {
+    		if (window["upData"]) {
+    			upData.searchUpdate();
+    		}
+    		else {
+    			if (count++ < 5) setTimeout(search, 500);
+    		}
+    	}
+    	let count = 0;
+    	setTimeout(search, 0);
     }
     
     function onmessage(event) {

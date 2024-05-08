@@ -1,4 +1,4 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23068";
 (function(global, factory) {
     (global = global || self, factory(global));
 }(this, (function(exports) {
@@ -68,53 +68,64 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
     //------------------------ loadFont ------------------
 
     let fonts_status = "unloaded"; // unloaded >> loading >> loaded
-    const fonts = [{
-        family: "mHeiTi",
-        descriptors: { weight: "normal" }
+    const fonts = [{	//  优先加载 Roboto 英文字体
+        	family: "Roboto",
+        	descriptors: { weight: "normal" }
         }, {
-        family: "mHeiTi",
-        descriptors: { weight: "bold" }
+        	family: "Roboto",
+        	descriptors: { weight: "bold" }
         }, {
-        family: "mHeiTi",
-        descriptors: { weight: "900" }
+        	family: "Roboto",
+        	descriptors: { weight: "900" }
         }, {
-        family: "Roboto",
-        descriptors: { weight: "normal" }
+        	family: "mHeiTi",
+        	descriptors: { weight: "normal" }
         }, {
-        family: "Roboto",
-        descriptors: { weight: "bold" }
+        	family: "mHeiTi",
+        	descriptors: { weight: "bold" }
         }, {
-        family: "Roboto",
-        descriptors: { weight: "900" }
+        	family: "mHeiTi",
+        	descriptors: { weight: "900" }
+        },{
+        	family: "emjFont",
+        	descriptors: { weight: "normal" }
         }, {
-        family: "emjFont",
-        descriptors: { weight: "normal" }
+        	family: "emjFont",
+        	descriptors: { weight: "bold" }
         }, {
-        family: "emjFont",
-        descriptors: { weight: "bold" }
-        }, {
-        family: "emjFont",
-        descriptors: { weight: "900" }
-    }];
+        	family: "emjFont",
+        	descriptors: { weight: "900" }
+    	}];
+    const queueBoards = [];
 
     async function wait(timeout) {
         return new Promise(resolve => setTimeout(resolve, timeout))
     }
 
-    async function loadFonts() {
-        if (fonts_status == "unloaded") {
+    async function loadFonts(cBoard) {
+    	!(queueBoards.find(board => board===cBoard)) && queueBoards.push(cBoard);
+    	if (fonts_status == "unloaded") {
+    		await wait(1000);
             fonts_status = "loading";
-            let log_str = "loadFonts:\n";
+            let log_str = "CheckerBoard loadFonts:\n";
+            const numFonts = fonts.length;
             while (fonts.length) {
                 const font = fonts.shift();
                 const fontCSS = `${font.descriptors.weight} 50px ${font.family}`;
                 const text = "五子棋renju123㉕㉖";
-                log_str += `css: ${fontCSS}\n`;
-                const fontFaces = await document.fonts.load(fontCSS, text);
+                log_str += `loading: ${fontCSS}, ${numFonts - fonts.length} / ${numFonts}\n`;
+                log(log_str, "info");
+            	const fontFaces = await document.fonts.load(fontCSS, text);
                 const logFontFaces = fontFaces.map(fontFace => `${fontFace.weight} 50px ${fontFace.family} ${fontFace.status}`).join("\n") || "没有找到字体";
-                log_str += `fontFace: ${logFontFaces} \n`;
+                log_str += `${logFontFaces} \n`;
+                log(log_str, "info");
+                queueBoards.map(board => {
+                	if (board.mode != MODE_BOARD) return;
+        			board.printEmptyCBoard();
+        			board.refreshBoardPoint("all");
+        			log(`font loaded: refreshCheckerBoard`);
+                })
             }
-            log(log_str, "info");
             fonts_status = "loaded";
         }
         else if (fonts_status == "loading") {
@@ -122,7 +133,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
                 await wait(1000);
             }
         }
-    }
+    }	
 
 
     //------------------------ Animation ------------------
@@ -1718,11 +1729,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23056";
         if (this.mode != MODE_BOARD) return;
         this.resetCBoardCoordinate();
         this.printEmptyCBoard();
-        await loadFonts();
-        if (this.mode != MODE_BOARD) return;
-        this.printEmptyCBoard();
-        this.refreshBoardPoint("all");
-        log("showCheckerBoard: refreshCheckerBoard");
+        await loadFonts(this);
     }
 
     Board.prototype.setCoordinate = function(coordinateType) {

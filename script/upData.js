@@ -75,9 +75,6 @@ window.upData = window.top.upData || (function() {
     
     async function ping(url) {
     	return new Promise(resolve => {
-    		if ("navigator" in self) {
-    			if (navigator.onLine === false) resolve(-2);
-    		}
     		const time = new Date().getTime();
     		setTimeout(() => resolve(-1), 15 * 1000);
     		fetch(url.split("?=")[0].split("#")[0] + "?cache=onlyNet")
@@ -122,7 +119,7 @@ window.upData = window.top.upData || (function() {
     }
     
     function saveAppVersion(version) {
-    	caches.setItem(keyRenjuVersion, version);
+    	("caches" in window) && caches.setItem(keyRenjuVersion, version);
     	localStorage.setItem(keyRenjuVersion, version);
     	localStorage.removeItem("delayCheckVersion");
     }
@@ -326,6 +323,39 @@ window.upData = window.top.upData || (function() {
             isNewVersion: version && version != currentVersion
         }
     }
+    
+    async function searchUpdate() {
+    	try{
+    	if (isCheckVersion()) {
+    		const version = await getUpDataVersion();
+    		if (version.isNewVersion) {
+    			async function fetchInfo(url) {
+    				try { return JSON.parse(await fetchTXT(url)) } catch (e) {}
+    			}
+    			const info = await fetchInfo("Version/UPDATA_INFO.json");
+    			const ASK = `发现新版本 ${version.version}\n` + logVersionInfo(version.version, info) + "\n";
+    			const PS = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
+    			const title = ASK + PS;
+    			const msg = window.msg || window["fullscreenUI"] && fullscreenUI.contentWindow.msg;
+    			msg ?
+    			msg({
+    				title,
+    				butNum: 2,
+    				lineNum: title.split("\n").length + 2,
+    				textAlign: "left",
+    				enterTXT: "取消",
+    				cancelTXT: "更新",
+    				callEnter: () => { delayCheckVersion() },
+    				callCancel: () => { resetAndUpData() }
+    			}) :
+    			((checkVersion && confirm(ASK + PS)) ?
+					resetAndUpData() :
+					delayCheckVersion()
+    			)
+    		}
+    	}
+    	}catch(e){alert(e.stack)}
+    }
 
     async function upData() { // find UpData open msg
         return new Promise(async (resolve) => {
@@ -449,12 +479,8 @@ window.upData = window.top.upData || (function() {
 				promiseArray.splice(j, 1);
 			}
 		}
-	} 
-    
-    async function openCache(version) {
-    	return await caches.open(version)
-    }
-    
+	}
+	
     async function loadCache(cache, url) {
     	log(`upData.js: loadCache ${url}`)
     	return await cache.match(new Request(url, myInit));
@@ -496,7 +522,7 @@ window.upData = window.top.upData || (function() {
     	urls = urls.map(url => formatURL(absoluteURL(url), version));
     	
     	window.loadAnimation && (loadAnimation.open(), loadAnimation.lock(true));
-    	const cache = await openCache(version);
+    	const cache = await caches.open(version);
     	
     	const numFiles = urls.length;
     	const errUrls = [];
@@ -526,7 +552,6 @@ window.upData = window.top.upData || (function() {
     }
 
     return {
-        get isCheckVersion() { return isCheckVersion },
         get delayCheckVersion() { return delayCheckVersion },
     	
         get removeAppCache() { return removeAppCache },
@@ -535,6 +560,7 @@ window.upData = window.top.upData || (function() {
         get getUpDataVersion() { return getUpDataVersion },
         get upData() { return upData },
         get autoUpData() { return autoUpData },
+        get searchUpdate() { return searchUpdate },
         get postVersion() { return postVersion },
         get checkAppVersion() { return checkAppVersion },
         get checkScriptVersion() { return checkScriptVersion },

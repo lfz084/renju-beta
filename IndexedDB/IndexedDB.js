@@ -1,4 +1,4 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["IndexedDB"] = "v2024.23056";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["IndexedDB"] = "v2024.23068";
 
 if (window.top.IndexedDB) {
 	window.IndexedDB = window.top.IndexedDB;

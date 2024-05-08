@@ -1,4 +1,4 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["msgbox"] = "v2024.23056";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["msgbox"] = "v2024.23068";
 (function(global, factory) {
 	(global = global || self, factory(global));
 }(this, (function(exports) {

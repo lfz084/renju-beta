@@ -61,9 +61,6 @@
     let online = false;
     async function ping(url) {
     	return new Promise(resolve => {
-    		if ("navigator" in self) {
-    			if (navigator.onLine === false) resolve(-2);
-    		}
     		const time = new Date().getTime();
     		setTimeout(() => resolve(-1), 15 * 1000);
     		fetch(url.split("?=")[0].split("#")[0] + "?cache=onlyNet")

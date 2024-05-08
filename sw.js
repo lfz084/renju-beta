@@ -1,18 +1,32 @@
-    const SCRIPT_VERSION = "v2024.23056";
+    const SCRIPT_VERSION = "v2024.23068";
     var cacheVersion;
-    const myInit = {
+    
+    const requestInit = {
     	cache: "no-store", //不使用缓存
     	mode: 'cors' //支持跨域访问
     };
     
-	var response_err = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport"content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no"><title>404 error</title><style>body{padding:0;margin:0;opacity:0}#mainview{position:fixed;top:0px;left:0px;width:500px;height:500px;border-radius:50px;background:#ddd;text-align:center}#info{position:absolute;top:10px;width:500px;height:250px;text-align:center}#link{position:absolute;top:260px;width:500px;height:250px;text-align:center}#refresh{font-size:70px;border-radius:50%;border:0px}#refresh:hover{color:#885588;opacity:0.38}h1{font-size:25px;font-weight:blod;line-height:1.5}a{color:#663366;font-size:26px;font-weight:blod;text-decoration:underline;line-height:1.8;cursor:pointer}a:link{color:#663366;text-decoration:underline}a:visited{color:#552255;text-decoration:underline}a:hover{color:#885588;text-decoration:underline}a:active{color:blue;text-decoration:underline}</style></head><body><script>try{const HOME=new RegExp("^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\-beta\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/|^http\\:\\/\\/[\\.\\:0-9a-z ]*\\/","i").exec(location.href);async function postVersion(){return new Promise(resolve=>{if(navigator.serviceWorker&&navigator.serviceWorker.controller){let timer;const cacheVersion=localStorage.getItem("RENJU_APP_VERSION");function onmessage(event){const MSG=event.data;if(typeof MSG=="object"&&MSG.cmd=="NEW_VERSION"){rm(MSG.versionChange)}}function rm(rt){navigator.serviceWorker.removeEventListener("message",onmessage);clearTimeout(timer);resolve(rt)}!cacheVersion&&resolve(false);navigator.serviceWorker.addEventListener("message",onmessage,true);navigator.serviceWorker.controller.postMessage({cmd:"NEW_VERSION",version:cacheVersion});timer=setTimeout(()=>{rm(false)},1500)}else{resolve(false)}})}async function ping(url){return new Promise(resolve=>{if("navigator" in self){if(navigator.onLine===false)resolve(-2)};const time=new Date().getTime();setTimeout(()=>resolve(-1),15*1000);fetch(url.split("?=")[0].split("#")[0]+"?cache=onlyNet").then(response=>response.ok?resolve(new Date().getTime()-time):resolve(-1))})}async function checkLink(){document.getElementById("log").innerHTML="正在测试网络链接......";return ping(HOME+"index.html").then(time=>{if(time>=0){document.getElementById("log").innerHTML="没有找到你要打开的页面"}else{document.getElementById("log").innerHTML="❌网络链接异常"}})}function clk(url){window.top.open(url,"_self")}postVersion().then(n=>n&&window.location.reload()).then(()=>{}).catch(()=>{}).then(()=>{document.body.style.opacity=1});document.body.onload=()=>{const gw=Math.min(document.documentElement.clientWidth,document.documentElement.clientHeight);const style=document.getElementById("mainview").style;style.left=(document.documentElement.clientWidth-500)/2+"px";style.top=(document.documentElement.clientHeight-500)/2+"px";style.transform="scale("+gw/600+")";checkLink();document.getElementById("refresh").onclick=async()=>{window.location.reload()};document.getElementById("home").onclick=()=>{clk(HOME+"index.html")};document.getElementById("gitee").onclick=()=>{clk("https://lfz084.gitee.io/renju/")};document.getElementById("github").onclick=()=>{clk("https://lfz084.github.io/")};document.getElementById("renjumap").onclick=()=>{clk("https://renjumap.com/renjutool/index.html")};document.getElementById("url").innerHTML=window.location.href}}catch(e){alert(e.stack)}</script><div id="mainview"><div id="info"><h1 id="url"></h1><h1 id="log"></h1></br><button id="refresh">🔄</button></div><div id="link"><br><a id="home">网站首页</a></br><a id="gitee">国内网站gitee</a></br><a id="github">国外网站github</a></br><a id="renjumap">镜像站renjumap</a></br></div></div></body></html>`;
+    const headers_html = { "Content-Type": 'text/html; charset=utf-8' };
+    const response_200_init_html = {
+    	status: 200,
+    	statusText: "OK",
+    	headers: headers_html
+    };
+    const response_404_init_data = {
+    	status: 404
+    };
+    
+	const response_err_html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport"content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no"><title>404 error</title><style>body{padding:0;margin:0;opacity:0}#mainview{position:fixed;top:0px;left:0px;width:500px;height:500px;border-radius:50px;background:#ddd;text-align:center}#info{position:absolute;top:10px;width:500px;height:250px;text-align:center}#link{position:absolute;top:260px;width:500px;height:250px;text-align:center}#refresh{font-size:70px;border-radius:50%;border:0px}#refresh:hover{color:#885588;opacity:0.38}h1{font-size:25px;font-weight:blod;line-height:1.5}a{color:#663366;font-size:26px;font-weight:blod;text-decoration:underline;line-height:1.8;cursor:pointer}a:link{color:#663366;text-decoration:underline}a:visited{color:#552255;text-decoration:underline}a:hover{color:#885588;text-decoration:underline}a:active{color:blue;text-decoration:underline}</style></head><body><script>try{const HOME=new RegExp("^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\-beta\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/|^http\\:\\/\\/[\\.\\:0-9a-z ]*\\/","i").exec(location.href);async function postVersion(){return new Promise(resolve=>{if(navigator.serviceWorker&&navigator.serviceWorker.controller){let timer;const cacheVersion=localStorage.getItem("RENJU_APP_VERSION");function onmessage(event){const MSG=event.data;if(typeof MSG=="object"&&MSG.cmd=="NEW_VERSION"){rm(MSG.versionChange)}}function rm(rt){navigator.serviceWorker.removeEventListener("message",onmessage);clearTimeout(timer);resolve(rt)}!cacheVersion&&resolve(false);navigator.serviceWorker.addEventListener("message",onmessage,true);navigator.serviceWorker.controller.postMessage({cmd:"NEW_VERSION",version:cacheVersion});timer=setTimeout(()=>{rm(false)},1500)}else{resolve(false)}})}async function ping(url){return new Promise(resolve=>{const time=new Date().getTime();setTimeout(()=>resolve(-1),15*1000);fetch(url.split("?=")[0].split("#")[0]+"?cache=onlyNet").then(response=>response.ok?resolve(new Date().getTime()-time):resolve(-1))})}async function checkLink(){document.getElementById("log").innerHTML="正在测试网络链接......";return ping(HOME+"index.html").then(time=>{if(time>=0){document.getElementById("log").innerHTML="没有找到你要打开的页面"}else{document.getElementById("log").innerHTML="❌网络链接异常"}})}function clk(url){window.top.open(url,"_self")}postVersion().then(n=>n&&window.location.reload()).then(()=>{}).catch(()=>{}).then(()=>{document.body.style.opacity=1});document.body.onload=()=>{const gw=Math.min(document.documentElement.clientWidth,document.documentElement.clientHeight);const style=document.getElementById("mainview").style;style.left=(document.documentElement.clientWidth-500)/2+"px";style.top=(document.documentElement.clientHeight-500)/2+"px";style.transform="scale("+gw/600+")";checkLink();document.getElementById("refresh").onclick=async()=>{window.location.reload()};document.getElementById("home").onclick=()=>{clk(HOME+"index.html")};document.getElementById("gitee").onclick=()=>{clk("https://lfz084.gitee.io/renju/")};document.getElementById("github").onclick=()=>{clk("https://lfz084.github.io/")};document.getElementById("renjumap").onclick=()=>{clk("https://renjumap.com/renjutool/index.html")};document.getElementById("url").innerHTML=window.location.href}}catch(e){alert(e.stack)}</script><div id="mainview"><div id="info"><h1 id="url"></h1><h1 id="log"></h1></br><button id="refresh">🔄</button></div><div id="link"><br><a id="home">网站首页</a></br><a id="gitee">国内网站gitee</a></br><a id="github">国外网站github</a></br><a id="renjumap">镜像站renjumap</a></br></div></div></body></html>`;
+    const response_err_data = "Error 404, file not found.";
+    const response_err_cache = "Error 404, file not found in cache";
+    const request_reject = "Failed to fetch. request rejected";
     
     /** 加载进度功能, 通过监视 fetch 事件，与窗口通信 */
     const load = (() => {
     	let urls = [];
     	let timer = null;
 
-    		function pushURL(url) {
+    	function pushURL(url) {
     		if (urls.indexOf(url) < 0) {
     			urls.push(url);
     		}
@@ -101,7 +115,7 @@
     }
     
     function setCacheVersion(version) {
-    	cacheVersion !== version && postMsg({ cmd: "alert", msg: `serverWorker cacheVersion change:\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${version}` });
+    	cacheVersion !== version && postMsg(`serverWorker cacheVersion change:\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${version}` );
     	return cacheVersion = version;
     }
     
@@ -135,97 +149,115 @@
     */
     
     //-------------------------- Request Response -----------------------------------
-
-    function myFetch(url, version, clientID) {
-    	return new Promise((resolve, reject) => {
-    		let nRequest = new Request(url.split("?")[0].split("#")[0] + "?v=" + new Date().getTime(), myInit);
-    		fetch(nRequest)
-    			.then(response => {
-    				load.finish(url);
-    				if (!response.ok) throw new Error(`response.ok = ${response.ok}, ${nRequest.url}`);
-    				if (/\.html$/i.test(url.split("?")[0].split("#")[0])) {
-    					let textRes = response.clone();
-    					return textRes.text()
-    						.then(text => {
-    							if (/\<\!DOCTYPE html\>/i.test(text)) return response;
-    							else throw new Error(`服务器返回了一个错误的HTML页面`);
-    						})
-    				}
-    				else {
-    					return response;
-    				}
-    			})
-    			.then(response => {
-    				//clientID != undefined && postMsg(`下载资源完成 url=${nRequest.url}`, clientID);
-    				let cloneRes = response.clone();
-    				if (url.indexOf("blob:http") == -1) {
-    					caches.open(version).then(cache => cache.put(new Request(url, myInit), response))
-    				}
-    				resolve(cloneRes);
-    			})
-    			.catch(err => {
-    				load.finish(url);
-    				reject(err);
-    			})
-    	})
+	
+    /**
+     * 从网络加载 response，如果没有找到，返回标记为404 错误的response
+     */
+    function onlyNet(url, version, clientID) {
+    	const nRequest = new Request(url.split("?")[0].split("#")[0] + "?v=" + new Date().getTime(), requestInit);
+    	load.loading(url, clientID);
+    	return fetch(nRequest)
+    		.then(response => {
+    			load.finish(url);
+    			return response;
+    		})
+    		.catch(err => {
+    			load.finish(url);
+    			return new Response(request_reject, response_404_init_data)
+    		})
     }
-
+	
+	/**
+	 * 从缓存读取 response，如果没有找到，返回标记为404 错误的response
+ 	*/
     function loadCache(url, version, clientID) {
     	return caches.open(version)
     		.then(cache => {
-    			return cache.match(new Request(url, myInit))
+    			return cache.match(new Request(url, requestInit))
     		})
     		.then(response => {
-    			load.finish(url);
-    			if (response.constructor.name != "Response") throw new Error(`response.ok = ${response.ok}, ${nRequest.url}`);
-    			//postMsg(`加载资源完成 url=${url}`, clientID);
-    			return response;
-    		})
-    }
-
-    function cacheFirst(url, version, clientID) {
-    	return loadCache(url, version, clientID)
-    		.catch(() => {
-    			//postMsg(`没有缓存，从网络下载资源 url=${_URL}`, clientID);
-    			return myFetch(url, version, clientID);
+    			return (response.constructor.name == "Response" && response.ok) ? response : Promise.reject();
     		})
     		.catch(err => {
-    			//postMsg(`404.html ${err.message}`, clientID);
-    			return fetchErr(err, url, version, clientID)
+    			return new Response(response_err_cache, response_404_init_data)
     		})
     }
-
-    function netFirst(url, version, clientID) {
-    	return myFetch(url, version, clientID)
-    		.catch(() => {
-    			return loadCache(url, version, clientID)
-    		})
-    		.catch(err => {
-    			return fetchErr(err, url, version, clientID)
-    		})
-    }
-
-    function fetchErr(err, url, version, clientID) {
+    
+    /**
+     * 返回标记为404 错误的response, HTML 页面做特殊处理
+     */
+    function fetchError(err, url, version, clientID) {
     	const type = url.split("?")[0].split("#")[0].split(".").pop();
-    	const myHeaders = { "Content-Type": 'text/html; charset=utf-8' };
-    	const init = {
-    		status: 200,
-    		statusText: "OK",
-    		headers: myHeaders
-    	}
+    	
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
     		const _URL = formatURL(request.url, version);
-    		postMsg(`fetchErr >> caches.open`)
+    		postMsg(`fetchError >> caches.open`)
     		return loadCache(_URL, version, clientID)
+    			.then(response => {
+    				return response.ok ? response : Promise.reject();
+    			})
     			.catch(() => {
-    				postMsg(`fetchErr >> new Response`)
-    				return new Response(response_err, init)
+    				postMsg(`fetchError >> new Response`);
+    				return new Response(response_err_html, response_200_init_html)
     			})
     	}
     	else {
-    		return Promise.reject(err);
+    		return new Response(response_err_data, response_404_init_data)
     	}
+    }
+    
+    /**
+     * 从网络加载 response，如果没有找到，返回标记为404 错误的response
+     * response.ok 为 true 时，保存在缓存中
+     */
+    function fetchAndPutCache(url, version, clientID) {
+    	return onlyNet(url, version, clientID)
+    		.then(response => {
+    			if (response.ok && url.indexOf("blob:http") == -1) {
+    				let cloneRes = response.clone();
+    				caches.open(version).then(cache => cache.put(new Request(url, requestInit), cloneRes))
+    			}
+    			return response;
+    		})
+    }
+	
+	/**
+	 * 从缓存优先获取 response，如果没有找到，返回标记为404 错误的response
+	 */
+    function cacheFirst(url, version, clientID) {
+    	return loadCache(url, version, clientID)
+    		.then(response => {
+    			return response.ok ? response : Promise.reject();
+    		})
+    		.catch(() => {
+    			return fetchAndPutCache(url, version, clientID);
+    		})
+    		.then(response => {
+    			return response.ok ? response : Promise.reject();
+    		})
+    		.catch(err => {
+    			return fetchError(err, url, version, clientID)
+    		})
+    }
+	
+	/**
+	 * 从网络优先获取 response，如果没有找到，返回标记为404 错误的response
+	 */
+    function netFirst(url, version, clientID) {
+    	return fetchAndPutCache(url, version, clientID)
+    		.then(response => {
+    			return response.ok ? response : Promise.reject();
+    		})
+    		.catch(() => {
+    			return loadCache(url, version, clientID)
+    		})
+    		.then(response => {
+    			return response.ok ? response : Promise.reject();
+    		})
+    		.catch(err => {
+    			return fetchError(err, url, version, clientID)
+    		})
     }
     
     //-------------------------- upData Caches -----------------------------------
@@ -268,27 +300,20 @@
     
     //-------------------- add HTML code -------------------- 
 
-    const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?bed4a8b88511e0724ea14c479e20c9b5";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
+    const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?c17b8a02edb4aff101e8b42ed01aca1b";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
     async function addHTMLCode(response) {
-    	const myHeaders = { "Content-Type": 'text/html; charset=utf-8' };
-    	const init = {
-    		status: 200,
-    		statusText: "OK",
-    		headers: myHeaders
-    	}
     	if (/\.html$|\.htm$/i.test(response.url.split("?")[0].split("#")[0])) {
     		return response.text()
     			.then(html => {
-    				return html.indexOf(tongjihtmlScript) + 1 ? html : html.replace(new RegExp("\<\/head\>", "i"), tongjihtmlScript + "\n<head>")
+    				return html.indexOf(tongjihtmlScript) + 1 ? html : html.replace(new RegExp("\<body\>", "i"), `<body>\n` + tongjihtmlScript)
     			})
-    			.then(html => new Response(html, init))
+    			.then(html => new Response(html, response_200_init_html))
     	}
     	else return response;
     }
     
     //-------------------- addEventListener -------------------- 
 
-    // 缓存
     self.addEventListener('install', function(event) {
     	self.skipWaiting();
     	/*
@@ -297,25 +322,19 @@
     	//postMsg({ cmd: "alert", msg: `install, ${cacheVersion}, ${new Date().getTime()}` });
     });
 
-    // 缓存更新
     self.addEventListener('activate', function(event) {
     	//postMsg({ cmd: "alert", msg: `activate, ${cacheVersion}, ${new Date().getTime()}` })
     });
-
-    // 捕获请求并返回缓存数据
+    
     self.addEventListener('fetch', function(event) {
     	event.respondWith(waitCurrentVersion().then(() => {
     		const _URL = formatURL(event.request.url, cacheVersion);
-    		const filename = _URL.split("?")[0].split("#")[0].split("/").pop();
-    		const type = _URL.split("?")[0].split("#")[0].split(".").pop();
-    	
-    		filename.indexOf(type) + 1 && load.loading(_URL, event.clientID);
+    		
     		postMsg(`请求资源 url=${_URL}`, event.clientID);
-    
     		const rt = /\?cache\=onlyNet$|\?cache\=onlyCache$|\?cache\=netFirst$|\?cache\=cacheFirst$/.exec(event.request.url);
     		const key = null == rt ? "default" : rt[0];
     		const waitResponse = {
-    			"?cache=onlyNet": myFetch,
+    			"?cache=onlyNet": onlyNet,
     			"?cache=onlyCache": loadCache,
     			"?cache=netFirst": netFirst,
     			"?cache=cacheFirst": cacheFirst,
@@ -360,7 +379,6 @@
 			const { msg, client } = delayMessages.shift();
 			postMsg(msg, client);
 		}
-		delay = true;
 	}
     
     self.addEventListener('message', function(event) {
@@ -379,7 +397,7 @@
     		}
     		else if (event.data.cmd == "fetchTXT") {
     			let url = event.data.url.split("?")[0].split("#")[0];
-    			fetch(new Request(url + "?v=" + new Date().getTime(), myInit))
+    			fetch(new Request(url + "?v=" + new Date().getTime(), requestInit))
     				.then(response => {
     					return response.ok ? response.text() : Promise.reject(`response.ok = ${response.ok}`)
     				})

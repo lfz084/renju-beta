@@ -412,4 +412,18 @@ console.log(s)
     
     
         		
+    async function a(b) {
+    	return Promise.resolve()
+    		.then(() => b ? Promise.resolve() : Promise.reject())
+    		.then(() => console.log(b))
+    		.catch(() => console.error(1))
+    		.catch(() => console.error(2))
+    		.then(() => console.log(3))
+    		.then(() => console.log(4))
+    		.catch(() => console.error(5))
+    		.catch(() => console.error(6))
+    }
     
+    a(true).then(()=>console.log(7)).catch(()=>console.error(8))
+    
+    fetch("upData.html").then(r=>(console.log(r.ok),r)).then(r=>r.text()).then(console.log)
