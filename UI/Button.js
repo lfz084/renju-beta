@@ -1,4 +1,4 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["button"] = "v2024.23068";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["button"] = "v2024.23086";
 (function(global, factory) {
 	(global = global || self, factory(global));
 }(this, (function(exports) {
@@ -10,7 +10,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["button"] = "v2024.23068";
 
 	function log(param, type = "log") {
 		const print = console[type] || console.log;
-		TEST_BUTTON && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[Button.js]\n>>  ${ param}`);
+		TEST_BUTTON && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[Button.js]  ${ param}`);
 	}
 
 	// ---------------------- groups ------------------------ 

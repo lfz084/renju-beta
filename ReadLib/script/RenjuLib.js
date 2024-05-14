@@ -5,7 +5,7 @@ window.RenjuLib = (() => {
 
     function log(param, type = "log") {
         const  print = console[type] || console.log;
-        TEST_RENLIB && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js]\n>>  ${ param}`);
+        TEST_RENLIB && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js] ${ param}`);
     }
 
     let url = "./ReadLib/script/RenjuLib_worker.js",

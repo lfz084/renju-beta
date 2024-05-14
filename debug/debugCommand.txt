@@ -427,3 +427,8 @@ console.log(s)
     a(true).then(()=>console.log(7)).catch(()=>console.error(8))
     
     fetch("upData.html").then(r=>(console.log(r.ok),r)).then(r=>r.text()).then(console.log)
+    
+    
+    caches.open("currentCache").then(cache=>cache.match("Version/SOURCE_FILES.json")).then(r=>r.json()).then(console.log).catch(console.error)
+    
+    serviceWorker.postMessage({cmd:"getVersionInfos",args:"io"}).then(console.log)

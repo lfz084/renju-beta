@@ -1,11 +1,11 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["engine"] = "v2024.23068";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["engine"] = "v2024.23086";
 window.engine = (function() {
             "use strict";
             const TEST_ENGINE = false;
 
             function log(param, type = "log") {
                 const print = console[type] || console.log;
-                TEST_ENGINE && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[engine.js]\n>>  ${ param}`);
+                TEST_ENGINE && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[engine.js]  ${ param}`);
             }
 
             //------------------------  ListNode   ------------------------ 

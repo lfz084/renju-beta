@@ -6,7 +6,7 @@
     
     function log(param, type = "log") {
         const print = console[type] || console.log;
-        TEST_LOADFILE && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+        TEST_LOADFILE && window.DEBUG && (true || window.vConsole || window.parent.vConsole) && print(`[loadFile.js]  ${ param}`);
     }
 
     //------------------------ loadFont ------------------
@@ -19,7 +19,7 @@
                     thenables.splice(0, 1);
                     Promise.resolve(t)
                         .then(nextPromise)
-                        .catch(reject)
+                        .catch(e=>reject(e && e.stack || e))
                 }
                 else {
                     return resolve();
@@ -37,14 +37,16 @@
     	return url.split("/").pop().split("?")[0].split("#")[0];
     }
 
-    function createScript(code) { // 用code 创建脚步
+    function createScript(code) { // 用code 创建脚本
         return new Promise((resolve, reject) => {
+        	try{
             let oHead = document.getElementsByTagName('HEAD').item(0);
             let oScript = document.createElement("script");
             oHead.appendChild(oScript);
             oScript.type = "text/javascript";
             oScript.text = code;
             setTimeout(resolve, 100);
+        	}catch(e){reject(`创建脚本出错: ${e && e.stack || e}`)}
         })
     }
 
@@ -53,14 +55,16 @@
         const filename = getFileName(url);
         log(`loadFile: loadCss("${url}")`)
     	return new Promise((resolve, reject) => {
+    		try{
             const head = document.getElementsByTagName('head')[0];
             const link = document.createElement('link');
             link.type = 'text/css';
             link.rel = 'stylesheet';
-            link.onload = () => setTimeout(resolve, 0);
-            link.onerror = () => reject(`加载css出错: ${filename}`);
+            link.addEventListener("load", () => setTimeout(resolve, 1), true);
+            link.addEventListener("error", () => reject(`加载css出错: ${filename}`), true);
             link.href = url;
             head.appendChild(link);
+        	}catch(e){reject(`加载${filename}出错: ${e && e.stack || e}`)}
         })
     }
     
@@ -69,12 +73,14 @@
         const filename = getFileName(url);
         log(`loadFile: loadFile("${url}", "${responseType}")`)
     	return new Promise((resolve, reject) => {
+    		try{
             const oReq = new XMLHttpRequest();
             oReq.responseType = responseType;
-            oReq.addEventListener("load", () => setTimeout(resolve, 0, oReq.response));
-            oReq.addEventListener("error", () => reject(`加载文件出错: ${filename}`));
+            oReq.addEventListener("load", () => setTimeout(resolve, 1, oReq.response), true);
+            oReq.addEventListener("error", () => reject(`加载文件出错: ${filename}`), true);
             oReq.open("GET", url);
             oReq.send();
+        	}catch(e){reject(`加载${filename}出错: ${e && e.stack || e}`)}
         })
     }
 
@@ -95,23 +101,24 @@
         const filename = getFileName(url);
         log(`loadFile: loadScript("${url}")`)
     	return new Promise((resolve, reject) => {
+    		try{
             const oHead = document.getElementsByTagName('HEAD').item(0);
                 const oScript = document.createElement("script");
                 oHead.appendChild(oScript);
                 oScript.type = "text/javascript";
-                oScript.rel = "preload";
                 oScript.as = "script";
-                oScript.onload = () => {
+                oScript.addEventListener("load", () => {
                     setTimeout(() => {
                         const ver = filename.split(/[\-\_\.]/)[0];
                         self["upData"] && upData.checkScriptVersion(ver);
                         resolve();
-                    }, 0);
-                }
-                oScript.onerror = (event) => {
-                	reject(`加载Script出错: ${filename}`)
-                }
+                    }, 1);
+                }, true)
+                oScript.addEventListener("error", (event) => {
+                	reject(event.message || `加载Script出错: ${filename}`)
+                }, true)
                 oScript.src = url;
+        	}catch(e){reject(`加载${filename}出错: ${e && e.stack || e}`)}
         })
     }
 
@@ -128,11 +135,11 @@
                             setTimeout(_timeout, 60 * 1000);
                             loadFun(fileName)
                                 .then(resolve)
-                                .catch(reject)
+                                .catch(e=>reject(e && e.stack || e))
                         })
                     })
                     .then(() => {
-                        return new Promise((resolve, reject) => {
+                        return callback && new Promise((resolve, reject) => {
                             setTimeout(() => {
                                 try {
                                     let p;
@@ -140,14 +147,14 @@
                                     if (typeof p == "object" &&
                                         typeof p.then == "function" &&
                                         typeof p.catch == "function") {
-                                        p.then(resolve).catch(reject) // p == Promise
+                                        p.then(resolve).catch(e=>reject(e && e.stack || e)) // p == Promise
                                     }
                                     else {
                                         resolve();
                                     }
                                 }
-                                catch (err) {
-                                    reject(err.stack)
+                                catch (e) {
+                                    reject(e && e.stack || e)
                                 }
                             }, 0)
                         });
@@ -212,7 +219,7 @@
             }
             window.loadAnimation && (loadAnimation.lock(false), loadAnimation.close());
         } catch (e) {
-            return Promise.reject(e.stack)
+            return Promise.reject(e && e.stack || e)
         }
     }
 

@@ -1,5 +1,5 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23068";
+self.SCRIPT_VERSIONS["renju"] = "v2024.23086";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
@@ -11,7 +11,7 @@ window.loadApp = (() => { // 按顺序加载应用
         const print = console[type] || console.log;
     	if (TEST_LOADAPP && window.DEBUG && (window.vConsole || window.parent.vConsole)) {
             const MSG = `${param}`;
-            print(`[loadApp.js]\n>>  ${MSG}`);
+            print(`[loadApp.js]  ${MSG}`);
             "mlog" in window && typeof mlog == "function" && mlog(MSG);
         }
     }
@@ -77,10 +77,16 @@ window.loadApp = (() => { // 按顺序加载应用
     
     window.fullscreenCancel = function(){localStorage.setItem("fullscreenCancel", "true")}
     
+    const openVconsoleSwitch = {
+    		FAST_SMALL: 1,
+    		DELAY_LARGE: 2,
+    		LAST_LARGE: 3
+    	}
+    const vconsoleSwitch = openVconsoleSwitch.FAST_SMALL;
     
     window.openVconsole = async function (open) {
     	const IS_DEBUG = open ? "true" : localStorage.getItem("debug");
-    	if (isTopWindow && IS_DEBUG == "true") {
+    	if (isTopWindow && (IS_DEBUG == "true" || vconsoleSwitch == openVconsoleSwitch.FAST_SMALL)) {
     		!("VConsole" in window) && (await loadScript("debug/vconsole.min.js"));
     		localStorage.setItem("debug", true);
     		if (vConsole == null) {
@@ -101,9 +107,8 @@ window.loadApp = (() => { // 按顺序加载应用
 		vConsole = null;
     }
 
-    window.addEventListener("error", function(err) {
-        log(err.stack || err.message || err, "error");
-        //alert(err.Stack || err.message || err);
+    window.addEventListener("error", function(event) {
+    	log(event.message || event, "error");
     })
 
     const BUT = document.createElement("div");
@@ -111,7 +116,8 @@ window.loadApp = (() => { // 按顺序加载应用
     document.body.appendChild(BUT);
 
     function removeMlog() {
-        if (BUT && BUT.parentNode) BUT.parentNode.removeChild(BUT);
+        BUT && BUT.parentNode && BUT.parentNode.removeChild(BUT);
+        BUT && BUT.remove();
         window.mlog = undefined;
     }
 
@@ -172,19 +178,15 @@ window.loadApp = (() => { // 按顺序加载应用
 	document.body.onload = async function load() {
     try {
     	window.console = window.parent.console;
-    	const openVconsoleSwitch = {
-    		FAST_SMALL: 1,
-    		DELAY_LARGE: 2,
-    		LAST_LARGE: 3
-    	}
-    	const openSwitch = openVconsoleSwitch.DELAY_LARGE;
     	
-    	openSwitch == openVconsoleSwitch.FAST_SMALL && isTopWindow && (await openVconsole());
-    	openSwitch == openVconsoleSwitch.DELAY_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
+    	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && isTopWindow && (await openVconsole());
+    	vconsoleSwitch == openVconsoleSwitch.DELAY_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
 		
-		console.info(logTestBrowser());
+		const cacheKeys = caches && [...(await caches.keys())] || [];
+		caches && console.info(`caches: [${cacheKeys}]`);
+		!fullscreenEnabled && console.info(logTestBrowser());
     	
-        window.SOURCE_FILES = window.SOURCE_FILES || await loadJSON("Version/SOURCE_FILES.json");
+    	window.SOURCE_FILES = window.SOURCE_FILES || (await loadJSON("Version/SOURCE_FILES.json")).files;
         window.UPDATA_INFO = await loadJSON("Version/UPDATA_INFO.json");
 		
 		const sources = window.appSources;
@@ -234,8 +236,6 @@ window.loadApp = (() => { // 按顺序加载应用
         	[SOURCE_FILES["Viewport"]]
     	], false)
     	
-    	await upData.checkAppVersion();
-    	
         if (false && window.location.href.indexOf("http://") > -1) {
         	mlog("removeServiceWorker ......");
         	await serviceWorker.removeServiceWorker();
@@ -243,11 +243,8 @@ window.loadApp = (() => { // 按顺序加载应用
     	else {
         	mlog("registerServiceWorker ......");
         	await serviceWorker.registerServiceWorker();
-        	mlog("upData CacheFiles ......");
-        	//const urls = Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key]);
-        	//await upData.saveCacheFiles(urls, upData.currentVersion);
-        	//mlog("postVersion ......");
-        	//await upData.postVersion(upData.currentVersion);
+        	mlog("refreshVersionInfos ......");
+        	await upData.refreshVersionInfos();
     	}
         
         mlog(`loading ${fullscreenEnabled ? "fullscreenUI" : "mainUI"}......`);
@@ -256,7 +253,7 @@ window.loadApp = (() => { // 按顺序加载应用
         if ("fullscreenUI" in self) {
         	mlog(`fullscreenUI.src = ${window.location.href}`, "warn")
         	fullscreenUI.src = window.location.href;
-        	openSwitch == openVconsoleSwitch.FAST_SMALL && fullscreenUI.viewport.userScalable();
+        	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && fullscreenUI.viewport.userScalable();
         	return;
         }
         
@@ -266,15 +263,13 @@ window.loadApp = (() => { // 按顺序加载应用
         loadAnimation.close();
         
         removeMlog();		
-        initNoSleep();
-        window.DEBUG = true;
+        !fullscreenEnabled && initNoSleep();
         window.jsPDF = window.jspdf && window.jspdf.jsPDF;
          
         const str = upData.logUpDataCompleted();
     	if (str) { //更新已经完成，弹窗提示
     		upData.saveAppVersion(upData.currentVersion);
-        	await upData.removeOldAppCache();
-    		str.indexOf(`\n`) == -1 ? warn(str) : msg({
+        	str.indexOf(`\n`) == -1 ? warn(str) : msg({
                 	text: str,
                 	butNum: 1,
                 	lineNum: 10,
@@ -286,19 +281,20 @@ window.loadApp = (() => { // 按顺序加载应用
         }
         
         console.info(`logCaches`)
-        const logCaches = (window.vConsole || window.parent.vConsole) && (await upData.logCaches(Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])));
+        const logCaches = !fullscreenEnabled && (window.vConsole || window.parent.vConsole) && (await upData.logCaches(Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])));
         console.info(logCaches);
-        console.info(upData.logVersions());
+        //console.info(upData.logVersions());
         
-    	openSwitch == openVconsoleSwitch.LAST_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
+    	vconsoleSwitch == openVconsoleSwitch.LAST_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
     	serviceWorker.postMessage({cmd: "postDelayMessages"});
     	
-        window["mainUI"] && upData.searchUpdate();
+        //window["mainUI"] && upData.searchUpdate();
     	
     }catch(err) {
-    	const ASK = `❌加载过程出现了错误...\n${err && err.stack}\n\n`;
+    	const ASK = `❌加载过程出现了错误...\n${err && err.stack || err}\n\n`;
     	const PS = `是否重置数据\n\n`;
-    	confirm(ASK + PS) ? window.location.href = "upData.html" : 	window.reloadApp();
+    	if (true) confirm(ASK + PS) ? window.location.href = "upData.html" : 	window.reloadApp();
+    	else setTimeout(() => caches.open("log").then(cache => cache.match("log")).then(response => response.text()).then(console.log), 6000)
     }
     }
 })()

@@ -5,7 +5,7 @@ window.DBClient = (() => {
 
     function log(param, type = "log") {
         const  print = console[type] || console.log;
-        TEST_DBClient && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js]\n>>  ${ param}`);
+        TEST_DBClient && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[dbclient.js] ${ param}`);
     }
     
     //----------------------------------------------------------

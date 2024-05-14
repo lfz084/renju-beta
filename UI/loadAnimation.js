@@ -5,7 +5,7 @@ window.loadAnimation = (function() { //控制加载动画
 	
 	function log(param, type = "log") {
 		const print = console[type] || console.log;
-		TEST_LOADANIMA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+		TEST_LOADANIMA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[loadAnimation.js]  ${ param}`);
 	}
 	
 	//--------------------------------------------------------------------------

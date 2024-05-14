@@ -1,7 +1,7 @@
-window.serviceWorker = window.top.serviceWorker || (() => {
+window.serviceWorker = window.parent.serviceWorker || (() => {
     "use strict";
 
-    const TEST_SERVER_WORKER = false;
+    const TEST_SERVER_WORKER = true;
     const scriptURL = './sw.js';
     let serviceWorker_state;
     
@@ -18,18 +18,27 @@ window.serviceWorker = window.top.serviceWorker || (() => {
     	setTimeout(search, 0);
     }
     
+    function controllerchange() {
+    	if (window["upData"]) {
+    		upData.refreshVersionInfos();
+    	}
+    }
+    
     function onmessage(event) {
     	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) return;
-    	TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,100)}`);
+    	TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,200)}`);
     	if (event.data && event.data.cmd == "alert") alert(event.data.msg);
     }
     
     async function postMessage(msg, timeout = 3000) {
     	return new Promise(resolve => {
     		function onmessage() {
-    			if (JSON.stringify(event.data.cmd) == JSON.stringify(msg)) {
-    				rm(event.data);
+    			if (typeof msg == "object") {
+    				if (event.data.cmd == msg.cmd && event.data.time == msg.time && JSON.stringify(event.data.args) == JSON.stringify(msg.args)) {
+    					rm(event.data.resolve)
+    				}
     			}
+    			else rm(event.data.resolve)
     		}
     		function rm(rt) {
     			navigator.serviceWorker.removeEventListener("message", onmessage, true);
@@ -67,6 +76,7 @@ window.serviceWorker = window.top.serviceWorker || (() => {
                 }
                 
 				navigator.serviceWorker.addEventListener("message", onmessage, true);
+            	navigator.serviceWorker.addEventListener("controllerchange", controllerchange, true);
             	navigator.serviceWorker.getRegistrations()
             		.then(registrations => {
             			registrations.map(registration => {

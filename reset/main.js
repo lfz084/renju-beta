@@ -86,10 +86,18 @@
     async function upDataApp() {
     	log("<br>");
     	await updateServiceWorker()
-    	await postVersion(undefined)
+    	await refreshVersionInfos()
     	await removeLocalStorage()
     	await removeCaches()
+    	await updateCache()
     	toIndex()
+    }
+    
+    async function updateCache() {
+    	if (!self.upData) return;
+    	const files = (await loadJSON("Version/SOURCE_FILES.json")).files;
+    	const urls = Object.keys(files).map(key => files[key]);
+    	await upData.saveCacheFiles(urls, "currentCache");
     }
     
     async function logNewVersion() {
@@ -111,37 +119,8 @@
     	else log("没有发现新版本<br>")
     }
     
-    async function postVersion(newVersion) {
-    	return new Promise(resolve => {
-    		if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-    			let timer;
-    
-    			function onmessage(event) {
-    				const MSG = event.data;
-    				if (typeof MSG == "object" && MSG.cmd == "NEW_VERSION" && MSG.version == newVersion) {
-    					log(`NEW_VERSION = ${MSG.version} <br>oldVersion: ${MSG.oldVersion}<br>`);
-    					rm();
-    				}
-    			}
-    
-    			function rm() {
-    				navigator.serviceWorker.removeEventListener("message", onmessage);
-    				clearTimeout(timer);
-    				resolve();
-    			}
-    			
-    			navigator.serviceWorker.addEventListener("message", onmessage);
-    			navigator.serviceWorker.controller.postMessage({ cmd: "NEW_VERSION", version: newVersion });
-    			log(`postVersion: ${newVersion}<br>`);
-    			timer = setTimeout(() => {
-    				log("postVersion Timeout<br>");
-    				rm();
-    			}, 3 * 1000);
-    		}
-    		else {
-    			resolve();
-    		}
-    	})
+    async function refreshVersionInfos() {
+    	return serviceWorker.postMessage({cmd: "refreshVersionInfos"})
     }
     
     async function removeServiceWorker() {
@@ -149,12 +128,14 @@
     		"getRegistrations" in navigator.serviceWorker &&
     		navigator.serviceWorker.getRegistrations()
     		.then(registrations => {
+    			const ps = [];
     			registrations.map(registration => {
     				if (window.location.href.indexOf(registration.scope) + 1) {
-    					registration.unregister();
+    					ps.push(registration.unregister());
     					log(`删除 serviceWorker ${registration.scope}<br>`);
     				}
     			})
+    			return Promise.all(ps);
     		})
     }
     
@@ -185,10 +166,12 @@
     	return "caches" in window &&
     		caches.keys()
     		.then(keys => {
+    			const ps = [];
     			keys.map(key => {
-    				caches.delete(key);
+    				ps.push(caches.delete(key));
     				log(`删除 caches ${key}<br>`);
     			})
+    			return Promise.all(ps);
     		})
     }
     

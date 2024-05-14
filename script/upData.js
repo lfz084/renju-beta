@@ -1,20 +1,20 @@
 // import removeServiceWorker form "serviceWorker.js"
-window.upData = window.top.upData || (function() {
+window.upData = window.parent.upData || (function() {
     'use strict';
 	const DEBUG_UPDATA = false;
     
     function log(param, type = "log") {
     	const print =  self["mlog"] && ((p) => {self["mlog"](p, type)}) || console.log;
-    	DEBUG_UPDATA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+    	DEBUG_UPDATA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[upData.js]:  ${ param}`);
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
     const elements = document.getElementsByTagName("version");
     const htmlVersion = elements ? elements[0].getAttribute("v") : "";
     const oldVersion = localStorage.getItem(keyRenjuVersion);
-	const currentVersion = oldVersion || htmlVersion;
+	let currentVersion = oldVersion || htmlVersion;
 	
-    let updataVersion;
+    let updateVersion;
     let checkVersion = isCheckVersion();
     let isLogNewVersionInfo = oldVersion != currentVersion;
     
@@ -101,7 +101,7 @@ window.upData = window.top.upData || (function() {
     }
 
     async function removeOldAppCache() {
-        return removeAppCache(cacheName => cacheName != "settings" && cacheName != currentVersion && cacheName != htmlVersion && cacheName != updataVersion)
+        return removeAppCache(cacheName => cacheName != "settings" && cacheName != currentVersion && cacheName != htmlVersion && cacheName != updateVersion)
     }
 
     async function resetApp() {
@@ -110,7 +110,7 @@ window.upData = window.top.upData || (function() {
     		return;
     	}
         await serviceWorker.updateServiceWorker()
-        await postVersion(undefined)
+        await refreshVersionInfos(undefined)
         await removeAppCache()
     }
 
@@ -142,12 +142,12 @@ window.upData = window.top.upData || (function() {
             urls = urls.map(url => decodeURIComponent(absoluteURL(url)));
     		if (keys.length < urls.length) {
             	typeof self.warn == "function" && warn(`️⚠ ️缓存异常 不能离线运行 刷新一下吧!`);
-            	console.error(`upData.js: caches.open(${cacheName}).cache.keys().length == 0`)
+            	console.error(`upData.js: caches.open(${cacheName}).cache.keys().length == ${keys.length}`)
             }
             cacheInfo[` [${cacheName}]`] = `${keys.length} / ${urls.length} 个文件 ______`;
             keys.forEach(request => {
             	const url = decodeURIComponent(request.url);
-            	const index = urls.indexOf(url.replace(/\?v\=v[0-9]+\.*[0-9]*/i, ""));
+            	const index = urls.indexOf(url.replace(/\?v\=[0-9a-z\.\-]*/i, ""));
             	index + 1 && urls.splice(index, 1);
             	cacheInfo[`000${++num}`.slice(-3)] = `${index + 1?"===":"+++"}\t${url.split("/").pop()}`;
             });
@@ -169,7 +169,7 @@ window.upData = window.top.upData || (function() {
             cachesInfo[`离线缓存 ${cachesNames.length} 个`] = cacheInfo;
             for (let index in cachesNames) {
             	const cacheName = cachesNames[index];
-            	cacheInfo[cacheName] = await logCache(cacheName, (/v\d+\.*\d*/i).test(cacheName) ? urls : undefined);
+            	cacheInfo[cacheName] = await logCache(cacheName, (/currentCache|updataCache/i).test(cacheName) ? urls : undefined);
             }
             return cachesInfo;
         }
@@ -217,7 +217,7 @@ window.upData = window.top.upData || (function() {
                     	return;
                     }
                     await serviceWorker.updateServiceWorker();
-                    await postVersion(undefined)
+                    await refreshVersionInfos(undefined)
                     await removeAppCache();
                     resetUpdataVersion();
                     window.reloadApp()
@@ -235,89 +235,31 @@ window.upData = window.top.upData || (function() {
     		return;
     	}
     	await serviceWorker.updateServiceWorker();
-    	await postVersion(undefined)
+    	await refreshVersionInfos(undefined)
         await removeAppCache();
         resetUpdataVersion();
         window.reloadApp();
     }
 
-    async function postVersion(newVersion) {
-        return new Promise(resolve => {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                let timer;
-                
-                function onmessage(event) {
-                	const MSG = event.data;
-                	if (typeof MSG == "object" && MSG.cmd == "NEW_VERSION" && MSG.version == newVersion) {
-                		log(`serviceWorker.onmessage: NEW_VERSION = ${MSG.version}, oldVersion: ${MSG.oldVersion}`, "info");
-                		rm();
-                	}
-                	else {
-                		log(`serviceWorker.onmessage: ${JSON.stringify(MSG)}`, "info");
-                	}
-                }
-
-                function rm() {
-                	navigator.serviceWorker.removeEventListener("message", onmessage);
-                	clearTimeout(timer);
-                    resolve();
-                }
-            	navigator.serviceWorker.addEventListener("message", onmessage);
-                navigator.serviceWorker.controller.postMessage({ cmd: "NEW_VERSION", version: newVersion });
-                log(`upData.postVersion: ${newVersion}`, "info");
-                timer = setTimeout(() => {
-                    log("postVersion Timeout", "error");
-                    rm();
-                }, 3 * 1000);
-            }
-            else {
-                resolve();
-            }
-        })
+    async function refreshVersionInfos() {
+    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" })
+    		.then(() => serviceWorker.postMessage({ cmd: "getVersionInfos" }))
+    		.then(({currentVersionInfo, updateVersionInfo}) => {
+    			currentVersion = currentVersionInfo.version;
+    			updateVersion = updateVersionInfo.version;
+    		})
     }
 
-    async function fetchTXT(url, timeout = 30 * 1000) {
-        url = absoluteURL(url);
-        return new Promise(resolve => {
-            let text = "";
-            let timer;
-            const cmd = "fetchTXT";
-            const time = new Date().getTime();
-
-            function onmessage(event) {
-            	if (typeof event.data == "object" &&
-            		event.data.type == "text" &&
-            		event.data.cmd == cmd &&
-            		event.data.time == time &&
-            		event.data.url == url
-            	){
-            		text = event.data.text;
-            		rm();
-            	}
-            }
-            
-            function rm() {
-                navigator.serviceWorker.removeEventListener("message", onmessage);
-                clearTimeout(timer);
-                resolve(text);
-            }
-
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-            	navigator.serviceWorker.addEventListener("message", onmessage);
-                navigator.serviceWorker.controller.postMessage({ cmd, url, time });
-                timer = setTimeout(rm, timeout);
-            }
-            else {
-                resolve(text);
-            }
-        })
+    async function fetchTXT(url) {
+    	url = url.split("?")[0].split("#")[0] + "?cache=onlyNet";
+        return fetch(url).then(r=>r.text())
     }
 
     async function getUpDataVersion() {
-        const txt = await fetchTXT("sw.js");
+        const txt = await fetchTXT("Version/SOURCE_FILES.json");
         const versionCode = (/\"v\d+\.*\d*\"/i).exec(txt);
         const version = versionCode ? String(versionCode).split(/[\"\;]/)[1] : undefined;
-        updataVersion = version;
+        updateVersion = version;
         return {
             version: version,
             isNewVersion: version && version != currentVersion
@@ -355,55 +297,6 @@ window.upData = window.top.upData || (function() {
     		}
     	}
     	}catch(e){alert(e.stack)}
-    }
-
-    async function upData() { // find UpData open msg
-        return new Promise(async (resolve) => {
-            async function upEnd(e) {
-                if (typeof e.data == "object" && e.data.cmd == "upData") {
-                    if (e.data.ok) {
-                        console.info(`更新完成 ${e.data.version}`)
-                        resetUpdataVersion();
-                        await removeOldAppCache();
-                        resolve(true);
-                    }
-                    else {
-                        console.error(`更新失败 ${e.data.version} : ${e.data.error}`);
-                        resolve(false);
-                    }
-                    navigator.serviceWorker.removeEventListener("message", upEnd);
-                }
-            }
-
-            function postUpData(version) {
-                console.info(`upData ${version}`);
-                const MSG = {
-                    cmd: "upData",
-                    version: version,
-                    files: Object.keys(window.SOURCE_FILES).map(key => absoluteURL(window.SOURCE_FILES[key]))
-                }
-                navigator.serviceWorker.addEventListener("message", upEnd);
-                navigator.serviceWorker.controller.postMessage(MSG);
-            }
-
-            if ("caches" in self && "serviceWorker" in navigator && navigator.serviceWorker.controller) {
-                const version = await getUpDataVersion();
-                if (version.isNewVersion) postUpData(version.version)
-                else resolve(true)
-            }
-            else resolve(true)
-        })
-    }
-
-    async function autoUpData() {
-        if ("serviceWorker" in navigator) {
-            let count = 0;
-            await wait(5 * 1000);
-            while (!(await upData()) && 5 > count++) {
-                await wait(30 * 1000);
-            }
-        }
-        console.info("结束更新");
     }
 
     function logVersionInfo(version = currentVersion, UPDATA_INFO = window.UPDATA_INFO) {
@@ -444,7 +337,7 @@ window.upData = window.top.upData || (function() {
     
     function formatURL(url, version) {
     	url = (absoluteURL(url).split("?")[0]).split("#")[0];
-    	const URL_VERSION = getUrlVersion(version);
+    	const URL_VERSION = "";//getUrlVersion(version);
     	const indexHtml = url.split("/").pop().indexOf(".") == -1 ? (url.slice(-1) == "/" ? "" : "/") + "index.html" : "";
     	return url + indexHtml + URL_VERSION
     }
@@ -482,12 +375,12 @@ window.upData = window.top.upData || (function() {
 	}
 	
     async function loadCache(cache, url) {
-    	log(`upData.js: loadCache ${url}`)
+    	log(` loadCache ${url}`)
     	return await cache.match(new Request(url, myInit));
     }
     
     async function putCache(cache, url, response) {
-    	log(`upData.js: putCache ${url}`)
+    	log(` putCache ${url}`)
     	return await cache.put(new Request(url, myInit), response)
     }
     
@@ -509,7 +402,7 @@ window.upData = window.top.upData || (function() {
     	if(!checkServiceWorkerAndCaches()) return;
     	const response = await loadCache(cache, url);
     	if (response) {
-    		log(`upData.js: saveCacheFile loaded "${url}" in cache ${version}`, "info")
+    		log(` saveCacheFile loaded "${url}" in cache ${version}`, "info")
     		return 2;
     	}
     	else {
@@ -558,10 +451,9 @@ window.upData = window.top.upData || (function() {
         get removeOldAppCache() { return removeOldAppCache },
         get resetAndUpData() { return resetAndUpData },
         get getUpDataVersion() { return getUpDataVersion },
-        get upData() { return upData },
         get autoUpData() { return autoUpData },
         get searchUpdate() { return searchUpdate },
-        get postVersion() { return postVersion },
+        get refreshVersionInfos() { return refreshVersionInfos },
         get checkAppVersion() { return checkAppVersion },
         get checkScriptVersion() { return checkScriptVersion },
         get resetApp() { return resetApp },

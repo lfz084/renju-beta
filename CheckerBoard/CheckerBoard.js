@@ -1,4 +1,4 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23068";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23086";
 (function(global, factory) {
     (global = global || self, factory(global));
 }(this, (function(exports) {
@@ -62,7 +62,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23068";
 
     function log(param, type = "log") {
         const print = console[type] || console.log;
-        TEST_CHECKER_BOARD && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+        TEST_CHECKER_BOARD && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js] ${ param}`);
     }
 
     //------------------------ loadFont ------------------

@@ -8,7 +8,7 @@ window.mainUI = (function() {
 	
 	function log(param, type = "log") {
 		const print = console[type] || console.log;
-		TEST_MAINUI && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js]\n>>  ${ param}`);
+		TEST_MAINUI && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[mainUI.js]  ${ param}`);
 	}
 
 	//--------------------------- 设置主界面框架，调整窗口比例 --------------------------------------------------

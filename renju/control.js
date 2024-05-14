@@ -5,7 +5,7 @@ window.control = (() => {
 
 		function log(param, type = "log") {
 			const print = console[type] || console.log;
-			TEST_CONTROL && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[control.js]\n>>  ${ param}`);
+			TEST_CONTROL && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[control.js]  ${ param}`);
 		}
 
 		//--------------------------------------------------------------

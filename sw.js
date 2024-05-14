@@ -1,5 +1,24 @@
-    const SCRIPT_VERSION = "v2024.23068";
-    var cacheVersion;
+    const SCRIPT_VERSION = "v2024.23086";
+    const home = new Request("./").url;
+    const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "beta" || "";
+    const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
+    const currentCacheKey = "currentCache" + beta;
+    const updataCacheKey = "updataCache" + beta;
+    const refreshVersionInterval = 3600 * 1000;
+    const updateCacheInterval = 6 * 3600 * 1000;
+    const CacheStatus = {
+    	UPDATE: 1,
+    	UPDATING: 2,
+    	UPDATED: 3,
+    	STOPING: 4,
+    };
+    Object.freeze(CacheStatus);
+    let updateStatus = CacheStatus.UPDATE;
+    let updateVersionInfo = null;
+    let currentVersionInfo = null;
+    let lastRefreshTime = 0;
+    
+    //------------------------------- Response --------------------------------
     
     const requestInit = {
     	cache: "no-store", //不使用缓存
@@ -16,12 +35,13 @@
     	status: 404
     };
     
-	const response_err_html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport"content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no"><title>404 error</title><style>body{padding:0;margin:0;opacity:0}#mainview{position:fixed;top:0px;left:0px;width:500px;height:500px;border-radius:50px;background:#ddd;text-align:center}#info{position:absolute;top:10px;width:500px;height:250px;text-align:center}#link{position:absolute;top:260px;width:500px;height:250px;text-align:center}#refresh{font-size:70px;border-radius:50%;border:0px}#refresh:hover{color:#885588;opacity:0.38}h1{font-size:25px;font-weight:blod;line-height:1.5}a{color:#663366;font-size:26px;font-weight:blod;text-decoration:underline;line-height:1.8;cursor:pointer}a:link{color:#663366;text-decoration:underline}a:visited{color:#552255;text-decoration:underline}a:hover{color:#885588;text-decoration:underline}a:active{color:blue;text-decoration:underline}</style></head><body><script>try{const HOME=new RegExp("^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\-beta\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/|^http\\:\\/\\/[\\.\\:0-9a-z ]*\\/","i").exec(location.href);async function postVersion(){return new Promise(resolve=>{if(navigator.serviceWorker&&navigator.serviceWorker.controller){let timer;const cacheVersion=localStorage.getItem("RENJU_APP_VERSION");function onmessage(event){const MSG=event.data;if(typeof MSG=="object"&&MSG.cmd=="NEW_VERSION"){rm(MSG.versionChange)}}function rm(rt){navigator.serviceWorker.removeEventListener("message",onmessage);clearTimeout(timer);resolve(rt)}!cacheVersion&&resolve(false);navigator.serviceWorker.addEventListener("message",onmessage,true);navigator.serviceWorker.controller.postMessage({cmd:"NEW_VERSION",version:cacheVersion});timer=setTimeout(()=>{rm(false)},1500)}else{resolve(false)}})}async function ping(url){return new Promise(resolve=>{const time=new Date().getTime();setTimeout(()=>resolve(-1),15*1000);fetch(url.split("?=")[0].split("#")[0]+"?cache=onlyNet").then(response=>response.ok?resolve(new Date().getTime()-time):resolve(-1))})}async function checkLink(){document.getElementById("log").innerHTML="正在测试网络链接......";return ping(HOME+"index.html").then(time=>{if(time>=0){document.getElementById("log").innerHTML="没有找到你要打开的页面"}else{document.getElementById("log").innerHTML="❌网络链接异常"}})}function clk(url){window.top.open(url,"_self")}postVersion().then(n=>n&&window.location.reload()).then(()=>{}).catch(()=>{}).then(()=>{document.body.style.opacity=1});document.body.onload=()=>{const gw=Math.min(document.documentElement.clientWidth,document.documentElement.clientHeight);const style=document.getElementById("mainview").style;style.left=(document.documentElement.clientWidth-500)/2+"px";style.top=(document.documentElement.clientHeight-500)/2+"px";style.transform="scale("+gw/600+")";checkLink();document.getElementById("refresh").onclick=async()=>{window.location.reload()};document.getElementById("home").onclick=()=>{clk(HOME+"index.html")};document.getElementById("gitee").onclick=()=>{clk("https://lfz084.gitee.io/renju/")};document.getElementById("github").onclick=()=>{clk("https://lfz084.github.io/")};document.getElementById("renjumap").onclick=()=>{clk("https://renjumap.com/renjutool/index.html")};document.getElementById("url").innerHTML=window.location.href}}catch(e){alert(e.stack)}</script><div id="mainview"><div id="info"><h1 id="url"></h1><h1 id="log"></h1></br><button id="refresh">🔄</button></div><div id="link"><br><a id="home">网站首页</a></br><a id="gitee">国内网站gitee</a></br><a id="github">国外网站github</a></br><a id="renjumap">镜像站renjumap</a></br></div></div></body></html>`;
+	const response_err_html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport"content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no"><title>404 error</title><style>body{padding:0;margin:0;opacity:0}#mainview{position:fixed;top:0px;left:0px;width:500px;height:500px;border-radius:50px;background:#ddd;text-align:center}#info{position:absolute;top:10px;width:500px;height:250px;text-align:center}#link{position:absolute;top:260px;width:500px;height:250px;text-align:center}#refresh{font-size:70px;border-radius:50%;border:0px}#refresh:hover{color:#885588;opacity:0.38}h1{font-size:25px;font-weight:blod;line-height:1.5}a{color:#663366;font-size:26px;font-weight:blod;text-decoration:underline;line-height:1.8;cursor:pointer}a:link{color:#663366;text-decoration:underline}a:visited{color:#552255;text-decoration:underline}a:hover{color:#885588;text-decoration:underline}a:active{color:blue;text-decoration:underline}</style></head><body><script>try{const HOME=new RegExp("^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\-beta\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/renju\\/|^https\\:\\/\\/[\\.\\:0-9a-z ]*\\/|^http\\:\\/\\/[\\.\\:0-9a-z ]*\\/","i").exec(location.href);async function postVersion(){return new Promise(resolve=>{if(navigator.serviceWorker&&navigator.serviceWorker.controller){let timer;const currentCacheKey=localStorage.getItem("RENJU_APP_VERSION");function onmessage(event){const MSG=event.data;if(typeof MSG=="object"&&MSG.cmd=="NEW_VERSION"){rm(MSG.versionChange)}}function rm(rt){navigator.serviceWorker.removeEventListener("message",onmessage);clearTimeout(timer);resolve(rt)}!currentCacheKey&&resolve(false);navigator.serviceWorker.addEventListener("message",onmessage,true);navigator.serviceWorker.controller.postMessage({cmd:"NEW_VERSION",version:currentCacheKey});timer=setTimeout(()=>{rm(false)},1500)}else{resolve(false)}})}async function ping(url){return new Promise(resolve=>{const time=new Date().getTime();setTimeout(()=>resolve(-1),15*1000);fetch(url.split("?=")[0].split("#")[0]+"?cache=onlyNet").then(response=>response.ok?resolve(new Date().getTime()-time):resolve(-1))})}async function checkLink(){document.getElementById("log").innerHTML="正在测试网络链接......";return ping(HOME+"index.html").then(time=>{if(time>=0){document.getElementById("log").innerHTML="没有找到你要打开的页面"}else{document.getElementById("log").innerHTML="❌网络链接异常"}})}function clk(url){window.top.open(url,"_self")}postVersion().then(n=>n&&window.location.reload()).then(()=>{}).catch(()=>{}).then(()=>{document.body.style.opacity=1});document.body.onload=()=>{const gw=Math.min(document.documentElement.clientWidth,document.documentElement.clientHeight);const style=document.getElementById("mainview").style;style.left=(document.documentElement.clientWidth-500)/2+"px";style.top=(document.documentElement.clientHeight-500)/2+"px";style.transform="scale("+gw/600+")";checkLink();document.getElementById("refresh").onclick=async()=>{window.location.reload()};document.getElementById("home").onclick=()=>{clk(HOME+"index.html")};document.getElementById("gitee").onclick=()=>{clk("https://lfz084.gitee.io/renju/")};document.getElementById("github").onclick=()=>{clk("https://lfz084.github.io/")};document.getElementById("renjumap").onclick=()=>{clk("https://renjumap.com/renjutool/index.html")};document.getElementById("url").innerHTML=window.location.href}}catch(e){alert(e.stack)}</script><div id="mainview"><div id="info"><h1 id="url"></h1><h1 id="log"></h1></br><button id="refresh">🔄</button></div><div id="link"><br><a id="home">网站首页</a></br><a id="gitee">国内网站gitee</a></br><a id="github">国外网站github</a></br><a id="renjumap">镜像站renjumap</a></br></div></div></body></html>`;
     const response_err_data = "Error 404, file not found.";
     const response_err_cache = "Error 404, file not found in cache";
     const request_reject = "Failed to fetch. request rejected";
     
-    /** 加载进度功能, 通过监视 fetch 事件，与窗口通信 */
+    //---------------------------------- loading -----------------------------------
+    
     const load = (() => {
     	let urls = [];
     	let timer = null;
@@ -64,7 +84,15 @@
     	};
     })();
     
-    //-------------------------- caches localStorage -----------------------------------
+    //-------------------------- caches -----------------------------------
+    
+    Cache.prototype.putJSON = async function (key, value) {
+		return this.put(new Request(key), new Response(JSON.stringify(value)))
+    }
+    
+    Cache.prototype.getJSON = async function(key) {
+    	return this.match(new Request(key)).then(response => response && response.text()).then(text => text && JSON.parse(text))
+    }
     
     caches.setItem = async function(key, value) {
     	return new Promise(resolve => {
@@ -101,11 +129,11 @@
     }
 
     function formatURL(url, version) {
-    	const _msg = `sw.js: formatURL("${url}")` //如果url是域名系统会自动加上"/"
+    	const _msg = `sw.js: formatURL("${url}")`;
     	url = url.split("?")[0].split("#")[0];
     	const URL_VERSION = getUrlVersion(version);
     	const indexHtml = url.split("/").pop().indexOf(".") == -1 ? (url.slice(-1) == "/" ? "" : "/") + "index.html" : "";
-    	url = url + indexHtml + URL_VERSION
+    	url = url + indexHtml;
     	//postMsg(`${_msg} "${url}"`)
     	return url;
     }
@@ -115,38 +143,145 @@
     }
     
     function setCacheVersion(version) {
-    	cacheVersion !== version && postMsg(`serverWorker cacheVersion change:\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${version}` );
-    	return cacheVersion = version;
+    	currentCacheKey !== version && postMsg(`serverWorker currentCacheKey change:\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${version}` );
+    	return currentCacheKey = version;
     }
     
-    async function waitCurrentVersion() {
-    	if (cacheVersion) return cacheVersion;
-    	return caches.getItem("RENJU_APP_VERSION")
-    		.then(newVersion => setCacheVersion(newVersion || SCRIPT_VERSION))
+    async function loadVersionInfo() {
+    	return onlyNet(VERSION_JSON)
+    		.then(response => (response && response.ok) ? response.json() : unde)
     }
     
-    //-------------------------- change Version -----------------------------------
+    //-------------------------- update Cache -----------------------------------
     
-    /** reset App cache Version */
-    waitCurrentVersion();
+	async function waitCacheReady(version = currentCacheKey) {
+    	const url = formatURL(VERSION_JSON, version);
+    	return Promise.resolve()
+    		.then(() => !currentVersionInfo && loadCache(url, version))
+    		.then(response => (response && response.ok) && response.json())
+    		.then(json => json && (currentVersionInfo = json))
+    		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
+    		.then(() => (!updateVersionInfo || (new Date().getTime() - lastRefreshTime > refreshVersionInterval)) && (lastRefreshTime = new Date().getTime() - refreshVersionInterval, onlyNet(url)))
+    		.then(response => (response && response.ok) && response.json())
+    		.then(json => json && (updateVersionInfo = json))
+    		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
+    		.then(() => {
+    			if (currentVersionInfo && updateVersionInfo) {
+    				if ((updateCacheInterval < new Date().getTime() - currentVersionInfo["createTime"]) &&
+    					(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
+    				) {
+    					postMsg("waitCacheReady >> updateCache")
+    					lastRefreshTime += refreshVersionInterval;
+    					updateCache()
+    				}
+    			}
+    			else if (!currentVersionInfo && updateVersionInfo) {
+    				postMsg("waitCacheReady >> resetCache")
+    				return resetCache(version, updateVersionInfo)
+    					.then(info => currentVersionInfo = info)
+    			}
+    			else if (currentVersionInfo && !updateVersionInfo) {
+    				postMsg("waitCacheReady >> offline?")
+    				updateVersionInfo = JSON.parse(JSON.stringify(currentVersionInfo, null, 2))
+    			}
+    			else {
+    				postMsg("waitCacheReady >> error")
+    				return Promise.reject("waitCacheReady: 刷新版本信息失败，请检查网络是否正常")
+    			}
+    		})
+    }
     
-    /*
-    function initCaches() {
-    	return caches.open(cacheVersion)
-    		.then(cache => cache.addAll(['./404.html']))
+    async function resetCache(cacheKey, cacheInfo) {
+    	const url = formatURL(VERSION_JSON, cacheKey);
+    	return caches.delete(cacheKey)
+    		.then(() => caches.open(cacheKey))
+    		.then(cache => {
+    			const newInfo = JSON.parse(JSON.stringify(cacheInfo, null, 2));
+    			newInfo["status"] = CacheStatus.UPDATE;
+				newInfo["createTime"] = new Date().getTime();
+				return cache.putJSON(new Request(url, requestInit), newInfo)
+					.then(() => newInfo)
+    		})
     }
-
-    function deleteOldCaches() {
-    	return caches.keys().then(cacheNames =>
-    		Promise.all(
-    			cacheNames.map(cacheName =>
-    				// 如果当前版本和缓存版本不一致
-    				cacheName !== cacheVersion && caches.delete(cacheName)
-    			)
-    		)
-    	)
+    
+    async function copyToCurrentCache() {
+    	postMsg("copyToCurrentCache start")
+    	return resetCache(currentCacheKey, updateVersionInfo)
+    		.then(info => currentVersionInfo = info)
+    		.then(() => Promise.all([caches.open(currentCacheKey), caches.open(updataCacheKey)]))
+    		.then(([currentCache, updataCache]) => {
+    			const ps = [];
+    			updataCache.matchAll().then(response => ps.push(currentCache.put(response.url, response)))
+    			return Promise.all(ps);
+    		})
+    		.then(() => caches.delete(updataCacheKey))
+    		.then(() => postMsg("copyToCurrentCache end"))
     }
-    */
+    
+    async function updateFiles(cacheKey, versionInfo) {
+    	versionInfo["status"] = CacheStatus.UPDATING;
+    	postMsg(`updateFiles: [${Object.keys(versionInfo["files"])}]`);
+    	return new Promise(resolve => {
+    		async function updateFile() {
+    			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
+    				const url = formatURL(new Request(files.shift()).url);
+    				return cacheFirst(url, cacheKey)
+    					.then(response => {
+    						response.ok && countCacheFiles++;
+    						updateFile()
+    					})
+    			}
+    			else {
+    				return resolve(countCacheFiles == numAllFiles);
+    			}
+    		}
+    		const files = Object.keys(versionInfo["files"]).map(key=>versionInfo["files"][key]);
+    		const numAllFiles = files.length;
+    		let countCacheFiles = 0;
+    		updateFile()
+    	})
+    	.then(updated => versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE))
+    	.then(status => status == CacheStatus.UPDATED && cacheKey == updataCacheKey && copyToCurrentCache())
+    }
+    
+    async function updateCache() {
+    	if (updateStatus == CacheStatus.UPDATING) return;
+    	updateStatus = CacheStatus.UPDATING;
+    	const url = formatURL(VERSION_JSON);
+    	return onlyNet(url)
+    		.then(response => (response && response.ok) ? response.json() : Promise.reject("updateCache: 刷新版本信息失败，跳过后续更新"))
+    		.then(versionInfo => versionInfo["version"] == currentVersionInfo["version"] ? { cacheKey: currentCacheKey, oldInfo: currentVersionInfo, newInfo: versionInfo } : { cacheKey: updataCacheKey, oldInfo: updateVersionInfo, newInfo: versionInfo })
+    		.then(({cacheKey, oldInfo, newInfo}) => {
+    			if (oldInfo["version"] != newInfo["version"]) {
+    				return resetCache(cacheKey, newInfo)
+    					.then(info => (Object.keys(oldInfo).map(key=>oldInfo[key]=undefined), Object.assign(oldInfo, info)))
+    					.then(() => ({versionInfo: oldInfo, cacheKey}))
+    			}
+    			else {
+    				return Promise.resolve()
+						.then(() => (oldInfo["files"]={}, Object.assign(oldInfo["files"], newInfo["files"])))
+    					.then(() => ({versionInfo: oldInfo, cacheKey}))
+    			}
+    		})
+    		.then(({cacheKey, versionInfo}) => versionInfo["status"] == CacheStatus.UPDATED ? Promise.reject(`${cacheKey} 已经缓存完成，跳过后续更新`) : {cacheKey, versionInfo})
+    		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo))
+    		.catch(e => postMsg(`updateCache error: ${e && e.stack || e && e.message || e}`))
+    		.then(() => updateStatus = CacheStatus.UPDATE)
+    }
+    
+    async function stopUpdating() {
+    	return new Promise(resolve => {
+    		currentVersionInfo["status"] == CacheStatus.UPDATING && (currentVersionInfo["status"] = CacheStatus.STOPING);
+    		updateVersionInfo["status"] == CacheStatus.UPDATING && (updateVersionInfo["status"] = CacheStatus.STOPING);
+    		let timer = setInterval(() => {
+    			if (updateStatus == CacheStatus.UPDATE) {
+    				clearInterval(timer);
+    				timer = null;
+    				resolve()
+    			}
+    		}, 500)
+    	})
+    }
     
     //-------------------------- Request Response -----------------------------------
 	
@@ -155,14 +290,14 @@
      */
     function onlyNet(url, version, clientID) {
     	const nRequest = new Request(url.split("?")[0].split("#")[0] + "?v=" + new Date().getTime(), requestInit);
-    	load.loading(url, clientID);
+    	clientID && load.loading(url, clientID);
     	return fetch(nRequest)
     		.then(response => {
-    			load.finish(url);
+    			clientID && load.finish(url);
     			return response;
     		})
     		.catch(err => {
-    			load.finish(url);
+    			clientID && load.finish(url);
     			return new Response(request_reject, response_404_init_data)
     		})
     }
@@ -176,7 +311,7 @@
     			return cache.match(new Request(url, requestInit))
     		})
     		.then(response => {
-    			return (response.constructor.name == "Response" && response.ok) ? response : Promise.reject();
+    			return (response && response.ok) ? response : Promise.reject();
     		})
     		.catch(err => {
     			return new Response(response_err_cache, response_404_init_data)
@@ -192,13 +327,13 @@
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
     		const _URL = formatURL(request.url, version);
-    		postMsg(`fetchError >> caches.open`)
+    		postMsg(`fetchError >> loadCache response: 404.html`)
     		return loadCache(_URL, version, clientID)
     			.then(response => {
     				return response.ok ? response : Promise.reject();
     			})
     			.catch(() => {
-    				postMsg(`fetchError >> new Response`);
+    				postMsg(`fetchError >> create response: 404.html`);
     				return new Response(response_err_html, response_200_init_html)
     			})
     	}
@@ -260,49 +395,11 @@
     		})
     }
     
-    //-------------------------- upData Caches -----------------------------------
-
-    function upData(files, version, clientID) {
-    	return new Promise((resolve, reject) => {
-    		let count = 0,
-    			maxCount = 10;
-
-    		function nextFile() {
-    			if (files.length) {
-    				let url = files.shift();
-    				postMsg(`upData file: ${url}`)
-    				cacheFirst(url, version, clientID)
-    					.then(() => setTimeout(nextFile, 100))
-    					.catch(() => {
-    						if (count++ < maxCount) {
-    							files.push(url);
-    							setTimeout(nextFile, 100)
-    						}
-    						else reject()
-    					})
-    			}
-    			else {
-    				resolve()
-    			}
-    		}
-
-    		caches.open(version)
-    			.then(cache => cache.keys())
-    			.then(keys => {
-    				for (let i = 0; i < keys.length; i++) {
-    					let index = files.indexOf(keys[i].url)
-    					if (index + 1) files.splice(index, 1)
-    				}
-    			})
-    			.then(nextFile)
-    	})
-    }
-    
     //-------------------- add HTML code -------------------- 
 
     const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?c17b8a02edb4aff101e8b42ed01aca1b";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
     async function addHTMLCode(response) {
-    	if (/\.html$|\.htm$/i.test(response.url.split("?")[0].split("#")[0])) {
+    	if (/^https\:\/\//.test(home) && /\.html$|\.htm$/i.test(response.url.split("?")[0].split("#")[0])) {
     		return response.text()
     			.then(html => {
     				return html.indexOf(tongjihtmlScript) + 1 ? html : html.replace(new RegExp("\<body\>", "i"), `<body>\n` + tongjihtmlScript)
@@ -319,42 +416,57 @@
     	/*
     	event.waitUntil()
     	*/
-    	//postMsg({ cmd: "alert", msg: `install, ${cacheVersion}, ${new Date().getTime()}` });
+    	//postMsg({ cmd: "alert", msg: `install, ${currentCacheKey}, ${new Date().getTime()}` });
     });
 
     self.addEventListener('activate', function(event) {
-    	//postMsg({ cmd: "alert", msg: `activate, ${cacheVersion}, ${new Date().getTime()}` })
+    	//postMsg({ cmd: "alert", msg: `activate, ${currentCacheKey}, ${new Date().getTime()}` })
     });
     
     self.addEventListener('fetch', function(event) {
-    	event.respondWith(waitCurrentVersion().then(() => {
-    		const _URL = formatURL(event.request.url, cacheVersion);
-    		
-    		postMsg(`请求资源 url=${_URL}`, event.clientID);
-    		const rt = /\?cache\=onlyNet$|\?cache\=onlyCache$|\?cache\=netFirst$|\?cache\=cacheFirst$/.exec(event.request.url);
-    		const key = null == rt ? "default" : rt[0];
-    		const waitResponse = {
-    			"?cache=onlyNet": onlyNet,
-    			"?cache=onlyCache": loadCache,
-    			"?cache=netFirst": netFirst,
-    			"?cache=cacheFirst": cacheFirst,
-    			"default": cacheFirst
-    		}[key];
-    		return waitResponse(_URL, cacheVersion, event.clientID)
-    			.then(response => addHTMLCode(response));
-    	}));
+    	if (event.request.url.indexOf(home) == 0) {
+    		const responsePromise = waitCacheReady()
+    			.then(() => {
+    				const _URL = formatURL(event.request.url, currentCacheKey);
+    				const rt = /\?cache\=onlyNet$|\?cache\=onlyCache$|\?cache\=netFirst$|\?cache\=cacheFirst$/.exec(event.request.url);
+    				const key = null == rt ? "default" : rt[0];
+    				const waitResponse = {
+    					"?cache=onlyNet": onlyNet,
+    					"?cache=onlyCache": loadCache,
+    					"?cache=netFirst": netFirst,
+    					"?cache=cacheFirst": cacheFirst,
+    					"default": cacheFirst
+    				} [key];
+    				postMsg(`fetch Event url: ${decodeURIComponent(_URL)}`, event.clientID);
+    				return waitResponse(_URL, currentCacheKey, event.clientID)
+    					.then(response => addHTMLCode(response));
+    			})
+    			.catch(err => {
+    				return new Response(err ? JSON.stringify(err, null, 2) : response_err_data, response_404_init_data)
+    			})
+    			
+    		event.respondWith(responsePromise);
+    	}
     });
     
-    //--------------------------  message ---------------------------------
+    //--------------------------  post message ---------------------------------
 	
 	const NUM_MAX_MSG = 1000;
 	let delay = true;
 	let delayMessages = [{
-		msg: `serverWorker reboot:\n___url: ${new Request("sw.js").url}\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${cacheVersion}`
+		msg: `serverWorker reboot:\n___url: ${new Request("sw.js").url}\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${currentCacheKey}`
 	}];
-	
+	let lastDelayMessages = new Date().getTime();
+	let log2cacheTimer = setInterval(() => {
+		if (5000 < new Date().getTime() - lastDelayMessages) {
+			clearInterval(log2cacheTimer);
+			postDelayMessages();
+		}
+	}, 1000)
+		
 	function delayMsg(msg, client) {
 		(typeof msg == "object") && (msg = JSON.parse(JSON.stringify(msg)));
+		lastDelayMessages = new Date().getTime();
 		delayMessages.push({msg, client});
 		delayMessages.length >= NUM_MAX_MSG && postDelayMessages();
 	}
@@ -374,63 +486,56 @@
 	
 	function postDelayMessages() {
 		let count = 0;
+		let logStr = "";
 		delay = false;
 		while (delayMessages.length && count++ < NUM_MAX_MSG) {
 			const { msg, client } = delayMessages.shift();
 			postMsg(msg, client);
+			logStr += (msg + "\n");
 		}
+		caches.open("log").then(cache => cache.put("log", new Response(logStr)))
+	}
+	
+	//--------------------------  onmessage ---------------------------------
+	
+	function getArgs(data) {
+		return Array.isArray(data.args) ? data.args : [data.args !== undefined ? data.args : data.arg]
+	}
+	
+	const COMMAND = {
+		formatURL: async (data) => {
+		 	data["resolve"] = formatURL(...getArgs(data))
+		},
+		postDelayMessages: async (data) => {
+			postDelayMessages();
+			data["resolve"] = true
+		},
+		waitCacheReady: async (data) => {
+			return waitCacheReady().then(() => data["resolve"] = true)
+		},
+		getCacheKeys: async (data) => {
+			data["resolve"] = {currentCacheKey, updataCacheKey}
+		},
+		getVersionInfos: async (data) => {
+			data["resolve"] = {currentVersionInfo, updateVersionInfo}
+		},
+		clearVersionInfos: async (data) => {
+			currentVersionInfo = updateVersionInfo = undefined;
+			data["resolve"] = true
+		},
+		refreshVersionInfos: async (data) => {
+			currentVersionInfo = updateVersionInfo = undefined;
+			return waitCacheReady().then(() => data["resolve"] = true)
+		},
 	}
     
-    self.addEventListener('message', function(event) {
+    self.addEventListener('message', async function(event) {
     	if (typeof event.data == "object") {
-    		if (event.data.cmd == "postDelayMessages") {
-    			postDelayMessages();
-    			syncMsg(event.data, event.clientID)
-    		}
-    		else if (event.data.cmd == "NEW_VERSION") {
-    			event.data["oldVersion"] = cacheVersion;
-    			if (event.data.version != cacheVersion) {
-    				event.data["versionChange"] = true;
-    				cacheVersion = event.data.version;
-    			}
-    			syncMsg(event.data, event.clientID)
-    		}
-    		else if (event.data.cmd == "fetchTXT") {
-    			let url = event.data.url.split("?")[0].split("#")[0];
-    			fetch(new Request(url + "?v=" + new Date().getTime(), requestInit))
-    				.then(response => {
-    					return response.ok ? response.text() : Promise.reject(`response.ok = ${response.ok}`)
-    				})
-    				.then(text => {
-    					Object.assign(event.data, {
-    						type: "text",
-    						text: text
-    					});
-    					syncMsg(event.data, event.clientID)
-    				})
-    				.catch(err => {
-    					Object.assign(event.data, {
-    						type: "text",
-    						text: ""
-    					});
-    					syncMsg(event.data, event.clientID)
-    				})
-    		}
-    		else if (event.data.cmd == "upData") {
-    			let version = event.data.version;
-    			let files = event.data.files.map(url => formatURL(url, version));
-    			upData(files, version, event.clientID)
-    				.then(() => {
-    					syncMsg({ cmd: "upData", ok: true, version: version }, event.clientID)
-    				})
-    				.catch(err => {
-    					syncMsg({ cmd: "upData", ok: false, version: version, error: err }, event.clientID)
-    				})
-    		}
+    		const fun = COMMAND[event.data.cmd] || async function(){};
+    		fun(event.data).then(() => syncMsg(event.data, event.clientID))
     	}
     	else {
-    		syncMsg(`serverWorker post: ${event.data}`, event.clientID)
+    		syncMsg(event.data, event.clientID)
     	}
     });
-    
     
