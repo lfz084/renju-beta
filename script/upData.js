@@ -10,7 +10,7 @@ window.upData = window.parent.upData || (function() {
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
     const elements = document.getElementsByTagName("version");
-    const htmlVersion = elements ? elements[0].getAttribute("v") : "";
+    const htmlVersion = (elements && elements[0]) ? elements[0].getAttribute("v") : "";
     const oldVersion = localStorage.getItem(keyRenjuVersion);
 	let currentVersion = oldVersion || htmlVersion;
 	
@@ -150,7 +150,6 @@ window.upData = window.parent.upData || (function() {
             const keys = cache ? await cache.keys() : [];
             urls = urls.map(url => decodeURIComponent(absoluteURL(url)));
     		if (keys.length < urls.length) {
-            	typeof self.warn == "function" && warn(`️⚠ ️缓存异常 不能离线运行 刷新一下吧!`);
             	console.error(`upData.js: caches.open(${cacheName}).cache.keys().length == ${keys.length}`)
             }
             cacheInfo[` [${cacheName}]`] = `${keys.length} / ${urls.length} 个文件 ______`;

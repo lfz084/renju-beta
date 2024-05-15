@@ -1,4 +1,4 @@
-    const SCRIPT_VERSION = "v2024.23112";
+    const SCRIPT_VERSION = "v2024.23118";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -16,7 +16,7 @@
     let updateStatus = CacheStatus.UPDATE;
     let updateVersionInfo = null;
     let currentVersionInfo = null;
-    let lastRefreshTime = 0;
+    let lastRefreshTime = new Date().getTime();
     
     //------------------------------- Response --------------------------------
     
@@ -154,48 +154,59 @@
     
     //-------------------------- update Cache -----------------------------------
     
-	let waitingCacheReady = undefined;
+	var waitingCacheReady = undefined;
 	async function waitCacheReady(clientID, version = currentCacheKey) {
-    	const url = formatURL(VERSION_JSON, version);
-    	waitingCacheReady = waitingCacheReady || Promise.resolve()
-    		//.then(()=>postMsg("waitingCacheReady...", clientID))
+		const url = formatURL(VERSION_JSON, version);
+		waitingCacheReady = currentVersionInfo && waitingCacheReady || Promise.resolve()
+			.then(()=>postMsg({cmd: "log", msg: "waitingCacheReady......"}, clientID))
     		.then(() => !currentVersionInfo && loadCache(url, version, clientID))
-    		.then(response => (response && response.ok) && response.json())
-    		.then(json => json && (currentVersionInfo = json))
-    		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
-    		.then(() => (!updateVersionInfo || (new Date().getTime() - lastRefreshTime > refreshVersionInterval)) && (lastRefreshTime = new Date().getTime() - refreshVersionInterval, onlyNet(url, version, clientID)))
-    		.then(response => (response && response.ok) && response.json())
-    		.then(json => json && (updateVersionInfo = json))
-    		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
-    		.then(() => {
-    			if (currentVersionInfo && updateVersionInfo) {
-    				if ((updateCacheInterval < new Date().getTime() - currentVersionInfo["createTime"]) &&
-    					(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
-    				) {
-    					postMsg("waitCacheReady >> updateCache", clientID)
-    					lastRefreshTime += refreshVersionInterval;
-    					updateCache()
-    				}
-    			}
-    			else if (!currentVersionInfo && updateVersionInfo) {
-    				postMsg("waitCacheReady >> resetCache", clientID)
-    				return resetCache(version, updateVersionInfo)
-    					.then(info => currentVersionInfo = info)
-    			}
-    			else if (currentVersionInfo && !updateVersionInfo) {
-    				postMsg("waitCacheReady >> offline?", clientID)
-    				updateVersionInfo = JSON.parse(JSON.stringify(currentVersionInfo, null, 2))
-    			}
-    			else {
-    				postMsg("waitCacheReady >> error", clientID)
-    				return Promise.reject("waitCacheReady: 刷新版本信息失败，请检查网络是否正常")
-    			}
-    		})
-    		.catch(()=>{})
-    		.then(() => waitingCacheReady = undefined)
-    		return waitingCacheReady;
-    }
-    
+			.then(response => (response && response.ok) && response.json())
+			.then(json => json && (currentVersionInfo = json))
+			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
+			.then(() => !currentVersionInfo && onlyNet(url, version, clientID))
+			.then(response => (response && response.ok) && response.json())
+			.then(json => json && (currentVersionInfo = json))
+			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime(), true))
+			.then(reset => reset && resetCache(version, currentVersionInfo).then(info => currentVersionInfo = info))
+			.then(() => currentVersionInfo && (updateVersionInfo = JSON.parse(JSON.stringify(currentVersionInfo, null, 2))))
+			
+			if (currentVersionInfo && 
+				currentVersionInfo["createTime"] &&
+				(updateCacheInterval < new Date().getTime() - currentVersionInfo["createTime"]) &&
+				(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
+			) {
+				lastRefreshTime = new Date().getTime() + refreshVersionInterval;
+				caches.setItem("lastRefreshTime", lastRefreshTime)
+				updateCache(clientID)
+			}
+			
+		return waitingCacheReady
+	}
+	
+	var waitingRefreshVersionInfos;
+	async function refreshVersionInfos(clientID) {
+		const url = formatURL(VERSION_JSON);
+		waitingRefreshVersionInfos = waitingRefreshVersionInfos || Promise.resolve()
+			.then(() => postMsg({cmd: "log", msg: "refreshVersionInfos......"}, clientID))
+    		.then(() => currentVersionInfo = updateVersionInfo = undefined)
+    		.then(() => !currentVersionInfo && loadCache(url, currentCacheKey, clientID))
+			.then(response => (response && response.ok) && response.json())
+			.then(json => json && (currentVersionInfo = json))
+			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
+			.then(() => !currentVersionInfo && onlyNet(url, currentCacheKey, clientID))
+			.then(response => (response && response.ok) && response.json())
+			.then(json => json && (currentVersionInfo = json))
+			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime(), true))
+			.then(reset => reset && (resetCache(currentCacheKey, currentVersionInfo).then(info => currentVersionInfo = info), true))
+			.then(isNewVersion => isNewVersion && (updateVersionInfo = JSON.parse(JSON.stringify(currentVersionInfo, null, 2))))
+			.then(() => !updateVersionInfo && onlyNet(url, updataCacheKey, clientID))
+			.then(response => (response && response.ok) && response.json())
+			.then(json => json && (updateVersionInfo = json))
+			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
+			.then(() => waitingRefreshVersionInfos = undefined)
+		return waitingRefreshVersionInfos;
+	}
+	
     async function resetCache(cacheKey, cacheInfo) {
     	const url = formatURL(VERSION_JSON, cacheKey);
     	return caches.delete(cacheKey)
@@ -218,9 +229,11 @@
     	return Promise.all(ps).then(() => count == urls.length)
     }
     
-    async function copyToCurrentCache() {
-    	postMsg("copyToCurrentCache start")
-    	return resetCache(currentCacheKey, updateVersionInfo)
+    var waitingCopyToCurrentCache
+    async function copyToCurrentCache(clientID) {
+    	waitingCopyToCurrentCache = waitingCopyToCurrentCache || Promise.resolve()
+    		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache start"}, clientID))
+    		.then(() => resetCache(currentCacheKey, updateVersionInfo))
     		.then(info => currentVersionInfo = info)
     		.then(() => Promise.all([caches.open(currentCacheKey), caches.open(updataCacheKey)]))
     		.then(([currentCache, updataCache]) => {
@@ -231,12 +244,14 @@
     			return Promise.all(ps);
     		})
     		.then(() => caches.delete(updataCacheKey))
-    		.then(() => (postMsg("copyToCurrentCache end"), true))
+    		.then(() => (postMsg({cmd: "log", msg: "copyToCurrentCache end"}, clientID), true))
+    		.then(() => waitingCopyToCurrentCache = undefined)
+    	return waitingCopyToCurrentCache;
     }
     
     async function updateFiles(cacheKey, versionInfo) {
     	versionInfo["status"] = CacheStatus.UPDATING;
-    	postMsg(`updateFiles: [${Object.keys(versionInfo["files"])}]`);
+    	postMsg({cmd: "log", msg: `updating files: [${Object.keys(versionInfo["files"]).length}]`});
     	return new Promise(resolve => {
     		async function updateFile() {
     			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
@@ -257,14 +272,15 @@
     		updateFile()
     	})
     	.then(updated => versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE))
-    	.then(status => status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}))
+    	.then(status => (postMsg({cmd: "log", msg: `files ${status == CacheStatus.UPDATED  ? "updated" : "fout"}`}), status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"})))
     }
     
-    async function updateCache() {
-    	if (updateStatus == CacheStatus.UPDATING) return;
-    	updateStatus = CacheStatus.UPDATING;
+    var waitingUpdateCache = undefined;
+    async function updateCache(clientID) {
     	const url = formatURL(VERSION_JSON);
-    	return onlyNet(url)
+    	waitingUpdateCache = waitingUpdateCache || Promise.resolve()
+    		.then(() => (postMsg({cmd: "log", msg: "updating......"}, clientID), updateStatus = CacheStatus.UPDATING))
+    		.then(() => onlyNet(url, undefined, clientID))
     		.then(response => (response && response.ok) ? response.json() : Promise.reject("updateCache: 刷新版本信息失败，跳过后续更新"))
     		.then(versionInfo => versionInfo["version"] == currentVersionInfo["version"] ? { cacheKey: currentCacheKey, oldInfo: currentVersionInfo, newInfo: versionInfo } : { cacheKey: updataCacheKey, oldInfo: updateVersionInfo, newInfo: versionInfo })
     		.then(({cacheKey, oldInfo, newInfo}) => {
@@ -281,8 +297,9 @@
     		})
     		.then(({cacheKey, versionInfo}) => versionInfo["status"] == CacheStatus.UPDATED ? Promise.reject(`${cacheKey} 已经缓存完成，跳过后续更新`) : {cacheKey, versionInfo})
     		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo))
-    		.catch(e => postMsg(`updateCache error: ${e && e.stack || e && e.message || e}`))
-    		.then(() => updateStatus = CacheStatus.UPDATE)
+    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || e }, clientID))
+    		.then(() => (updateStatus = CacheStatus.UPDATE, waitingUpdateCache = undefined))
+    	return waitingUpdateCache;
     }
     
     async function stopUpdating() {
@@ -343,13 +360,13 @@
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
     		const _URL = formatURL(request.url, version);
-    		postMsg(`fetchError >> loadCache response: 404.html`, clientID)
+    		postMsg({cmd: "error", msg: `loadCache response: 404.html`}, clientID)
     		return loadCache(_URL, version, clientID)
     			.then(response => {
     				return response.ok ? response : Promise.reject();
     			})
     			.catch(() => {
-    				postMsg(`fetchError >> create response: 404.html`, clientID);
+    				postMsg({cmd: "error", msg: `create response: 404.html`}, clientID);
     				return new Response(response_err_html, response_200_init_html)
     			})
     	}
@@ -480,9 +497,7 @@
 	
 	const NUM_MAX_MSG = 1000;
 	let delay = true;
-	let delayMessages = [{
-		msg: `-----serverWorker reboot:-----time: ${new Date().getTime()}; url: ${new Request("./").url}; Script Version: ${SCRIPT_VERSION}; cache Version: ${currentCacheKey}`
-	}];
+	let delayMessages = [];
 	let lastDelayMessages = new Date().getTime();
 	let log2cacheTimer = setInterval(() => {
 		if (5000 < new Date().getTime() - lastDelayMessages) {
@@ -537,9 +552,6 @@
 			postDelayMessages();
 			data["resolve"] = true
 		},
-		waitCacheReady: async (data, clientID) => {
-			return waitCacheReady(clientID).then(() => data["resolve"] = true)
-		},
 		getCacheKeys: async (data, clientID) => {
 			data["resolve"] = {currentCacheKey, updataCacheKey}
 		},
@@ -551,14 +563,13 @@
 			data["resolve"] = true
 		},
 		refreshVersionInfos: async (data, clientID) => {
-			currentVersionInfo = updateVersionInfo = undefined;
-			return waitCacheReady(clientID).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
+			return refreshVersionInfos(clientID).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
 		},
 		checkCache: async (data, clientID) => {
 			return checkCache(...getArgs(data)).then(rt => data["resolve"] = rt)
 		},
 		copyToCurrentCache: async (data, clientID) => {
-		 	return copyToCurrentCache().then(rt => data["resolve"] = rt)
+		 	return copyToCurrentCache(clientID).then(rt => data["resolve"] = rt)
 		 },
 	}
     
@@ -576,3 +587,12 @@
     		syncMsg(data, clientID)
     	}
     });
+    
+    //---------------------- load --------------------------------
+    
+    postMsg({
+    	cmd: "log",
+    	msg: `----- serviceWorker reboot -----\n\ttime: ${new Date().getTime()} \n\tScriptURL: ${new Request("./sw.js").url} \n\tScript Version: ${SCRIPT_VERSION} \n\tcache Version: ${currentCacheKey}`
+    });
+    caches.getItem("lastRefreshTime").then(v => lastRefreshTime = (v && v * 1 || 0))
+				

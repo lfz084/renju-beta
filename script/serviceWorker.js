@@ -15,6 +15,9 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     	info: (data) => {
     		console.info(data.msg)
     	},
+    	warn: (data) => {
+    		console.warn(data.msg)
+    	},
     	error: (data) => {
     		console.error(data.msg)
     	},
@@ -56,11 +59,11 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) {
     		return;
     	}
-    	else if (typeof event.data == "object") {
-    		COMMAND[event.data.cmd] && COMMAND[event.data.cmd](event.data);
+    	else if (typeof event.data == "object" && COMMAND[event.data.cmd]) {
+    		COMMAND[event.data.cmd](event.data);
     	}
     	else {
-    		TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,200)}`);
+    		TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker message: ${JSON.stringify(event.data).slice(0,200)}`);
     	}
     }
     

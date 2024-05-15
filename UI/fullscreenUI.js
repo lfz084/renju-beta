@@ -212,7 +212,7 @@ window.fullscreenUI = (() => {
 			}
 
 			function show(delay = defaultDelay) {
-				console.info("show")
+				//console.info("show")
 				lastTime = new Date().getTime();
 				timer = setInterval(() => {
 					new Date().getTime() - lastTime > delay && hide()
@@ -396,7 +396,7 @@ window.fullscreenUI = (() => {
 					element.removeEventListener("mouseup", first, true);
 					element.removeEventListener("keydown", first, true);
 					element.removeEventListener("keyup", first, true);
-					console.warn(`fullscreenUI.js: ${element} ${event.type} first requestFullscreen`)
+					//console.warn(`fullscreenUI.js: ${element} ${event.type} first requestFullscreen`)
 					requestFullscreen()
 				}
 

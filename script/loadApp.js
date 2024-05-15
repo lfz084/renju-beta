@@ -1,5 +1,5 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23112";
+self.SCRIPT_VERSIONS["renju"] = "v2024.23118";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
@@ -60,7 +60,7 @@ window.loadApp = (() => { // 按顺序加载应用
     window.dw = d.documentElement.clientWidth;
     window.dh = d.documentElement.clientHeight;
     const isTopWindow = window === window.parent;
-	const fullscreenEnabled = document.fullscreenEnabled && isTopWindow && !localStorage.getItem("fullscreenCancel");
+	const fullscreenEnabled = true && document.fullscreenEnabled && isTopWindow && !localStorage.getItem("fullscreenCancel");
 		
     
     window.vConsole = null; // 调试工具
@@ -289,6 +289,8 @@ window.loadApp = (() => { // 按顺序加载应用
     	vconsoleSwitch == openVconsoleSwitch.LAST_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
     	serviceWorker.postMessage({cmd: "postDelayMessages"});
     	
+        vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && !fullscreenEnabled && mainUI.viewport.userScalable();
+        
         //window["mainUI"] && upData.searchUpdate();
     	
     }catch(err) {
