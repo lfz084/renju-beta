@@ -1,6 +1,6 @@
-    const SCRIPT_VERSION = "v2024.23086";
+    const SCRIPT_VERSION = "v2024.23112";
     const home = new Request("./").url;
-    const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "beta" || "";
+    const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
     const currentCacheKey = "currentCache" + beta;
     const updataCacheKey = "updataCache" + beta;
@@ -154,14 +154,16 @@
     
     //-------------------------- update Cache -----------------------------------
     
-	async function waitCacheReady(version = currentCacheKey) {
+	let waitingCacheReady = undefined;
+	async function waitCacheReady(clientID, version = currentCacheKey) {
     	const url = formatURL(VERSION_JSON, version);
-    	return Promise.resolve()
-    		.then(() => !currentVersionInfo && loadCache(url, version))
+    	waitingCacheReady = waitingCacheReady || Promise.resolve()
+    		//.then(()=>postMsg("waitingCacheReady...", clientID))
+    		.then(() => !currentVersionInfo && loadCache(url, version, clientID))
     		.then(response => (response && response.ok) && response.json())
     		.then(json => json && (currentVersionInfo = json))
     		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
-    		.then(() => (!updateVersionInfo || (new Date().getTime() - lastRefreshTime > refreshVersionInterval)) && (lastRefreshTime = new Date().getTime() - refreshVersionInterval, onlyNet(url)))
+    		.then(() => (!updateVersionInfo || (new Date().getTime() - lastRefreshTime > refreshVersionInterval)) && (lastRefreshTime = new Date().getTime() - refreshVersionInterval, onlyNet(url, version, clientID)))
     		.then(response => (response && response.ok) && response.json())
     		.then(json => json && (updateVersionInfo = json))
     		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
@@ -170,25 +172,28 @@
     				if ((updateCacheInterval < new Date().getTime() - currentVersionInfo["createTime"]) &&
     					(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
     				) {
-    					postMsg("waitCacheReady >> updateCache")
+    					postMsg("waitCacheReady >> updateCache", clientID)
     					lastRefreshTime += refreshVersionInterval;
     					updateCache()
     				}
     			}
     			else if (!currentVersionInfo && updateVersionInfo) {
-    				postMsg("waitCacheReady >> resetCache")
+    				postMsg("waitCacheReady >> resetCache", clientID)
     				return resetCache(version, updateVersionInfo)
     					.then(info => currentVersionInfo = info)
     			}
     			else if (currentVersionInfo && !updateVersionInfo) {
-    				postMsg("waitCacheReady >> offline?")
+    				postMsg("waitCacheReady >> offline?", clientID)
     				updateVersionInfo = JSON.parse(JSON.stringify(currentVersionInfo, null, 2))
     			}
     			else {
-    				postMsg("waitCacheReady >> error")
+    				postMsg("waitCacheReady >> error", clientID)
     				return Promise.reject("waitCacheReady: 刷新版本信息失败，请检查网络是否正常")
     			}
     		})
+    		.catch(()=>{})
+    		.then(() => waitingCacheReady = undefined)
+    		return waitingCacheReady;
     }
     
     async function resetCache(cacheKey, cacheInfo) {
@@ -204,6 +209,15 @@
     		})
     }
     
+    async function checkCache(cacheKey) {
+    	let count = 0;
+    	const ps = [];
+    	const info = cacheKey == "currentCache" ? currentVersionInfo : updateVersionInfo;
+    	const urls = Object.keys(info.files).map(key => info.files[key]).map(url => formatURL(url));
+    	urls.map(url => ps.push(loadCache(url, cacheKey + beta).then(response => response.ok && count++)));
+    	return Promise.all(ps).then(() => count == urls.length)
+    }
+    
     async function copyToCurrentCache() {
     	postMsg("copyToCurrentCache start")
     	return resetCache(currentCacheKey, updateVersionInfo)
@@ -211,11 +225,13 @@
     		.then(() => Promise.all([caches.open(currentCacheKey), caches.open(updataCacheKey)]))
     		.then(([currentCache, updataCache]) => {
     			const ps = [];
-    			updataCache.matchAll().then(response => ps.push(currentCache.put(response.url, response)))
+    			updataCache.matchAll().then(responses => {
+    				responses.map(response => ps.push(currentCache.put(formatURL(response.url), response)))
+    			})
     			return Promise.all(ps);
     		})
     		.then(() => caches.delete(updataCacheKey))
-    		.then(() => postMsg("copyToCurrentCache end"))
+    		.then(() => (postMsg("copyToCurrentCache end"), true))
     }
     
     async function updateFiles(cacheKey, versionInfo) {
@@ -241,7 +257,7 @@
     		updateFile()
     	})
     	.then(updated => versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE))
-    	.then(status => status == CacheStatus.UPDATED && cacheKey == updataCacheKey && copyToCurrentCache())
+    	.then(status => status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}))
     }
     
     async function updateCache() {
@@ -327,13 +343,13 @@
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
     		const _URL = formatURL(request.url, version);
-    		postMsg(`fetchError >> loadCache response: 404.html`)
+    		postMsg(`fetchError >> loadCache response: 404.html`, clientID)
     		return loadCache(_URL, version, clientID)
     			.then(response => {
     				return response.ok ? response : Promise.reject();
     			})
     			.catch(() => {
-    				postMsg(`fetchError >> create response: 404.html`);
+    				postMsg(`fetchError >> create response: 404.html`, clientID);
     				return new Response(response_err_html, response_200_init_html)
     			})
     	}
@@ -416,29 +432,40 @@
     	/*
     	event.waitUntil()
     	*/
-    	//postMsg({ cmd: "alert", msg: `install, ${currentCacheKey}, ${new Date().getTime()}` });
+    	//postMsg({ cmd: "alert", msg: `install, ${currentCacheKey}, ${new Date().getTime()}` }, event.clientID);
     });
 
     self.addEventListener('activate', function(event) {
-    	//postMsg({ cmd: "alert", msg: `activate, ${currentCacheKey}, ${new Date().getTime()}` })
+    	//postMsg({ cmd: "alert", msg: `activate, ${currentCacheKey}, ${new Date().getTime()}` }, event.clientID)
     });
     
     self.addEventListener('fetch', function(event) {
     	if (event.request.url.indexOf(home) == 0) {
-    		const responsePromise = waitCacheReady()
+    		const responsePromise = waitCacheReady(event.clientID)
     			.then(() => {
     				const _URL = formatURL(event.request.url, currentCacheKey);
-    				const rt = /\?cache\=onlyNet$|\?cache\=onlyCache$|\?cache\=netFirst$|\?cache\=cacheFirst$/.exec(event.request.url);
-    				const key = null == rt ? "default" : rt[0];
+    				const execStore = /\?cache\=onlyNet|\?cache\=onlyCache|\?cache\=netFirst|\?cache\=cacheFirst/.exec(event.request.url);
+    				const storeKey = null == execStore ? "default" : execStore[0];
     				const waitResponse = {
     					"?cache=onlyNet": onlyNet,
     					"?cache=onlyCache": loadCache,
     					"?cache=netFirst": netFirst,
     					"?cache=cacheFirst": cacheFirst,
     					"default": cacheFirst
-    				} [key];
+    				}[storeKey];
+    				const execCacheKey = /\?cacheKey\=currentCache|\?cacheKey\=updataCache|\?cacheKey\=updateCache|\&cacheKey\=currentCache|\&cacheKey\=updataCache|\&cacheKey\=updateCache/.exec(event.request.url);
+    				const cacheKey = null == execCacheKey ? "default" : execCacheKey[0];
+    				const version = {
+    					"?cacheKey=currentCache": currentCacheKey,
+    					"?cacheKey=updataCache": updataCacheKey,
+    					"?cacheKey=updateCache": updataCacheKey,
+    					"&cacheKey=currentCache": currentCacheKey,
+    					"&cacheKey=updataCache": updataCacheKey,
+    					"&cacheKey=updateCache": updataCacheKey,
+    					"default": currentCacheKey
+    				}[cacheKey];
     				postMsg(`fetch Event url: ${decodeURIComponent(_URL)}`, event.clientID);
-    				return waitResponse(_URL, currentCacheKey, event.clientID)
+    				return waitResponse(_URL, version, event.clientID)
     					.then(response => addHTMLCode(response));
     			})
     			.catch(err => {
@@ -454,7 +481,7 @@
 	const NUM_MAX_MSG = 1000;
 	let delay = true;
 	let delayMessages = [{
-		msg: `serverWorker reboot:\n___url: ${new Request("sw.js").url}\n___Script Version: ${SCRIPT_VERSION}\n___cache Version: ${currentCacheKey}`
+		msg: `-----serverWorker reboot:-----time: ${new Date().getTime()}; url: ${new Request("./").url}; Script Version: ${SCRIPT_VERSION}; cache Version: ${currentCacheKey}`
 	}];
 	let lastDelayMessages = new Date().getTime();
 	let log2cacheTimer = setInterval(() => {
@@ -503,39 +530,49 @@
 	}
 	
 	const COMMAND = {
-		formatURL: async (data) => {
+		formatURL: async (data, clientID) => {
 		 	data["resolve"] = formatURL(...getArgs(data))
 		},
-		postDelayMessages: async (data) => {
+		postDelayMessages: async (data, clientID) => {
 			postDelayMessages();
 			data["resolve"] = true
 		},
-		waitCacheReady: async (data) => {
-			return waitCacheReady().then(() => data["resolve"] = true)
+		waitCacheReady: async (data, clientID) => {
+			return waitCacheReady(clientID).then(() => data["resolve"] = true)
 		},
-		getCacheKeys: async (data) => {
+		getCacheKeys: async (data, clientID) => {
 			data["resolve"] = {currentCacheKey, updataCacheKey}
 		},
-		getVersionInfos: async (data) => {
+		getVersionInfos: async (data, clientID) => {
 			data["resolve"] = {currentVersionInfo, updateVersionInfo}
 		},
-		clearVersionInfos: async (data) => {
+		clearVersionInfos: async (data, clientID) => {
 			currentVersionInfo = updateVersionInfo = undefined;
 			data["resolve"] = true
 		},
-		refreshVersionInfos: async (data) => {
+		refreshVersionInfos: async (data, clientID) => {
 			currentVersionInfo = updateVersionInfo = undefined;
-			return waitCacheReady().then(() => data["resolve"] = true)
+			return waitCacheReady(clientID).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
 		},
+		checkCache: async (data, clientID) => {
+			return checkCache(...getArgs(data)).then(rt => data["resolve"] = rt)
+		},
+		copyToCurrentCache: async (data, clientID) => {
+		 	return copyToCurrentCache().then(rt => data["resolve"] = rt)
+		 },
 	}
     
-    self.addEventListener('message', async function(event) {
-    	if (typeof event.data == "object") {
-    		const fun = COMMAND[event.data.cmd] || async function(){};
-    		fun(event.data).then(() => syncMsg(event.data, event.clientID))
+    self.addEventListener('message', function(event) {
+    	const data = { cmd: event.data.cmd, time: event.data.time, args: event.data.args, arg: event.data.arg };
+    	const clientID = event.clientID;
+    	const fun = COMMAND[data.cmd];
+    	if (typeof data == "object" && fun) {
+    		fun(data, clientID)
+    			.then(() => {
+    				syncMsg(data, clientID)
+    			})
     	}
     	else {
-    		syncMsg(event.data, event.clientID)
+    		syncMsg(data, clientID)
     	}
     });
-    

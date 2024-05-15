@@ -5,7 +5,40 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     const scriptURL = './sw.js';
     let serviceWorker_state;
     
+    const COMMAND = {
+    	alert: (data) => {
+    		alert(data.msg)
+    	},
+    	log: (data) => {
+    		console.log(data.msg)
+    	},
+    	info: (data) => {
+    		console.info(data.msg)
+    	},
+    	error: (data) => {
+    		console.error(data.msg)
+    	},
+    	copyToCurrentCache: async (data) => {
+    		const up = await upData.searchUpdate();
+    		if (up && up.action == "copyToCurrentCache") {
+    			const msg = window.msg || window["fullscreenUI"] && fullscreenUI.contentWindow.msg;
+    			const title = up.title + up.warn;
+    			msg && msg({
+    				title,
+    				butNum: 2,
+    				lineNum: title.split("\n").length + 2,
+    				textAlign: "left",
+    				enterTXT: "取消",
+    				cancelTXT: "更新",
+    				callEnter: () => { upData.delayCheckVersion() },
+    				callCancel: () => { upData.copyToCurrentCache() }
+    			})
+    		}
+    	},
+    }
+    
     function updatefound() {
+    	/*
     	function search() {
     		if (window["upData"]) {
     			upData.searchUpdate();
@@ -16,21 +49,26 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     	}
     	let count = 0;
     	setTimeout(search, 0);
-    }
-    
-    function controllerchange() {
-    	if (window["upData"]) {
-    		upData.refreshVersionInfos();
-    	}
+    	*/
     }
     
     function onmessage(event) {
-    	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) return;
-    	TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,200)}`);
-    	if (event.data && event.data.cmd == "alert") alert(event.data.msg);
+    	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) {
+    		return;
+    	}
+    	else if (typeof event.data == "object") {
+    		COMMAND[event.data.cmd] && COMMAND[event.data.cmd](event.data);
+    	}
+    	else {
+    		TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.message: ${JSON.stringify(event.data).slice(0,200)}`);
+    	}
     }
     
-    async function postMessage(msg, timeout = 3000) {
+    function messageerror() {
+    	console.error("Receive message from service worker failed!");
+    }
+    
+    async function postMessage(msg, timeout = 5000) {
     	return new Promise(resolve => {
     		function onmessage() {
     			if (typeof msg == "object") {
@@ -76,8 +114,8 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
                 }
                 
 				navigator.serviceWorker.addEventListener("message", onmessage, true);
-            	navigator.serviceWorker.addEventListener("controllerchange", controllerchange, true);
-            	navigator.serviceWorker.getRegistrations()
+            	navigator.serviceWorker.addEventListener("messageerror", messageerror, true);
+				navigator.serviceWorker.getRegistrations()
             		.then(registrations => {
             			registrations.map(registration => {
             				if (window.location.href.indexOf(registration.scope) + 1) {
@@ -111,17 +149,16 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
             }
             else resolve()
         })
-        
         if (sWorker) {
 			/** 首次使用 ServiceWorker 没有正常工作就刷新 */
         	if (!navigator.serviceWorker.controller) {
             	console.warn(`ServiceWorker 没有正常工作,刷新网页...`)
-            	window.reloadApp();
+            	await window.reloadApp();
         	}
         }
     }
     
-    async function removeServiceWorker() {
+    async function removeServiceWorker(callback = ()=>{}) {
         return new Promise(resolve => {
             if ("serviceWorker" in navigator) {
                 const ps = [];
@@ -129,7 +166,8 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
                     .then(registrations => {
                         registrations.map(registration => {
                             if (window.location.href.indexOf(registration.scope) + 1) {
-                                ps.push(registration.unregister())
+                                ps.push(registration.unregister());
+                                callback(registration)
                             }
                         })
                     })
@@ -144,7 +182,7 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
         })
     }
     
-    async function updateServiceWorker() {
+    async function updateServiceWorker(callback = ()=>{}) {
         return new Promise(resolve => {
             if ("serviceWorker" in navigator) {
             	const ps = [];
@@ -153,6 +191,7 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
                         registrations.map(registration => {
                             if (window.location.href.indexOf(registration.scope) + 1) {
                                 ps.push(registration.update());
+                                callback(registration)
                             }
                         })
                     })

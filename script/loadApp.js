@@ -1,5 +1,5 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23086";
+self.SCRIPT_VERSIONS["renju"] = "v2024.23112";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
@@ -142,8 +142,9 @@ window.loadApp = (() => { // 按顺序加载应用
     	let reloadCount = localStorage.getItem("reloadCount") * 1 || 0;
         localStorage.setItem("reloadCount", ++reloadCount);
         const url = window.location.href.split("?")[0] + `?v=${new Date().getTime()}${codeURL ? "#" + codeURL : ""}`
-        reloadCount > 16 && (localStorage.removeItem("reloadCount"),  window.upData && (await upData.resetApp()));
+        reloadCount > 16 && (localStorage.removeItem("reloadCount"),  "upData" in window && (await upData.resetApp()));
         window.location.href = url;
+        return new Promise(resolve => setTimeout(resolve, 30 * 1000));
     }
 
     window.codeURL = window.location.href.split(/#/)[1] || "";
@@ -240,7 +241,7 @@ window.loadApp = (() => { // 按顺序加载应用
         	mlog("removeServiceWorker ......");
         	await serviceWorker.removeServiceWorker();
         }
-    	else {
+    	else if(isTopWindow) {
         	mlog("registerServiceWorker ......");
         	await serviceWorker.registerServiceWorker();
         	mlog("refreshVersionInfos ......");
@@ -293,8 +294,14 @@ window.loadApp = (() => { // 按顺序加载应用
     }catch(err) {
     	const ASK = `❌加载过程出现了错误...\n${err && err.stack || err}\n\n`;
     	const PS = `是否重置数据\n\n`;
-    	if (true) confirm(ASK + PS) ? window.location.href = "upData.html" : 	window.reloadApp();
-    	else setTimeout(() => caches.open("log").then(cache => cache.match("log")).then(response => response.text()).then(console.log), 6000)
+    	if (true) { 
+    		confirm(ASK + PS) ? window.location.href = "upData.html" : 	window.reloadApp();
+    	}
+    	else {
+    		console.error(ASK);
+    		setTimeout(() => {}, 6000)
+    		caches.open("log").then(cache => cache.match("log")).then(response => response.text()).then(console.log)
+    	}
     }
     }
 })()

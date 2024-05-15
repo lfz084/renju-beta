@@ -82,26 +82,35 @@ window.upData = window.parent.upData || (function() {
     	})
     }
     
-    async function checkLink() {
+    async function checkLink(callback = ()=>{}) {
+    	callback("正在测试网络链接......");
     	return ping("index.html").then(time => {
-    		return time >= 0;
+    		if (time >= 0) {
+    			callback("网络链接正常");
+    			return true;
+    		}
+    		else {
+    			callback("❌网络链接异常");
+    			return false;
+    		}
     	});
     }
 
-    async function removeAppCache(filter = () => true) {
+    async function removeAppCache(callback = ()=>{}, filter = () => true) {
         if ("caches" in window) {
             const cacheNames = await caches.keys();
             cacheNames && cacheNames.map(cacheName => {
             	if(filter(cacheName)) {
             		caches.delete(cacheName)
-            		log(`delete cache: ${cacheName}`, "info")
+            		log(`delete cache: ${cacheName}`, "info");
+            		callback(cacheName)
             	}
             })
         }
     }
 
     async function removeOldAppCache() {
-        return removeAppCache(cacheName => cacheName != "settings" && cacheName != currentVersion && cacheName != htmlVersion && cacheName != updateVersion)
+        return removeAppCache(undefined, cacheName => cacheName != "settings" && cacheName != currentVersion && cacheName != htmlVersion && cacheName != updateVersion)
     }
 
     async function resetApp() {
@@ -197,7 +206,7 @@ window.upData = window.parent.upData || (function() {
             if (checkVersion && confirm(ASK + PS)) {
                 await resetApp()
                 resetUpdataVersion();
-                window.reloadApp();
+                await window.reloadApp();
             }
             else {
                 checkVersion && delayCheckVersion();
@@ -220,7 +229,7 @@ window.upData = window.parent.upData || (function() {
                     await refreshVersionInfos(undefined)
                     await removeAppCache();
                     resetUpdataVersion();
-                    window.reloadApp()
+                    await window.reloadApp()
                 }
                 else {
                     checkVersion && delayCheckVersion();
@@ -235,15 +244,14 @@ window.upData = window.parent.upData || (function() {
     		return;
     	}
     	await serviceWorker.updateServiceWorker();
-    	await refreshVersionInfos(undefined)
-        await removeAppCache();
+    	await removeAppCache();
         resetUpdataVersion();
-        window.reloadApp();
+    	await refreshVersionInfos(undefined)
+        await window.reloadApp();
     }
 
     async function refreshVersionInfos() {
-    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" })
-    		.then(() => serviceWorker.postMessage({ cmd: "getVersionInfos" }))
+    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 8000)
     		.then(({currentVersionInfo, updateVersionInfo}) => {
     			currentVersion = currentVersionInfo.version;
     			updateVersion = updateVersionInfo.version;
@@ -266,38 +274,74 @@ window.upData = window.parent.upData || (function() {
         }
     }
     
-    async function searchUpdate() {
-    	try{
-    	if (isCheckVersion()) {
-    		const version = await getUpDataVersion();
-    		if (version.isNewVersion) {
-    			async function fetchInfo(url) {
-    				try { return JSON.parse(await fetchTXT(url)) } catch (e) {}
-    			}
-    			const info = await fetchInfo("Version/UPDATA_INFO.json");
-    			const ASK = `发现新版本 ${version.version}\n` + logVersionInfo(version.version, info) + "\n";
-    			const PS = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
-    			const title = ASK + PS;
-    			const msg = window.msg || window["fullscreenUI"] && fullscreenUI.contentWindow.msg;
-    			msg ?
-    			msg({
-    				title,
-    				butNum: 2,
-    				lineNum: title.split("\n").length + 2,
-    				textAlign: "left",
-    				enterTXT: "取消",
-    				cancelTXT: "更新",
-    				callEnter: () => { delayCheckVersion() },
-    				callCancel: () => { resetAndUpData() }
-    			}) :
-    			((checkVersion && confirm(ASK + PS)) ?
-					resetAndUpData() :
-					delayCheckVersion()
-    			)
-    		}
-    	}
-    	}catch(e){alert(e.stack)}
+    async function copyToCurrentCache() {
+    	resetUpdataVersion()
+    	return checkLink().then(online => online && serviceWorker.postMessage({cmd: "copyToCurrentCache"})).then(() => window.reloadApp())
     }
+    
+    async function searchUpdate() {
+    	try {
+    		async function fetchInfo(url) {
+    			try { return JSON.parse(await fetchTXT(url)) } catch (e) {}
+    		}
+    		const rt = { title: "", warn: "", action: "", actionLabel: "", fun: () => {} };
+    		const info = await fetchInfo("Version/UPDATA_INFO.json");
+    		const version = await getUpDataVersion();
+    		const { updateVersionInfo } = await serviceWorker.postMessage({ cmd: "getVersionInfos" });
+    		if (version.isNewVersion) {
+    			const Cached = updateVersionInfo && updateVersionInfo.version == version.version && await serviceWorker.postMessage({ cmd: "checkCache", arg: "updataCache" });
+    			rt.title = `${Cached && "新版本已下载完成" || "发现新版本"} ${version.version}` + upData.logVersionInfo(version.version, info) + "\n";
+    			rt.warn = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
+    			rt.action = Cached ? "copyToCurrentCache" : "update";
+    			rt.actionLabel = Cached ? "缓存" : "更新";
+    			rt.fun = () => Cached ? copyToCurrentCache() : resetAndUpData()
+    		}
+    		else {
+    			const ck = await serviceWorker.postMessage({ cmd: "checkCache", arg: "currentCache" })
+    			if (!ck) {
+    				rt.title = `当前版本离线缓存不完整，你可以点击缓存\n`;
+    				rt.action = "updateCache";
+    				rt.actionLabel = "缓存";
+    			}
+    			else rt.title = "没有发现新版本\n"
+    		}
+    		return rt;
+    	} catch (e) { alert(e.stack) }
+    }
+    /*
+    async function searchUpdate() {
+    	try {
+    		if (isCheckVersion()) {
+    			const version = await getUpDataVersion();
+    			if (version.isNewVersion) {
+    				async function fetchInfo(url) {
+    					try { return JSON.parse(await fetchTXT(url)) } catch (e) {}
+    				}
+    				const info = await fetchInfo("Version/UPDATA_INFO.json");
+    				const ASK = `发现新版本 ${version.version}\n` + logVersionInfo(version.version, info) + "\n";
+    				const PS = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
+    				const title = ASK + PS;
+    				const msg = window.msg || window["fullscreenUI"] && fullscreenUI.contentWindow.msg;
+    				if (msg) {
+    					msg({
+    						title,
+    						butNum: 2,
+    						lineNum: title.split("\n").length + 2,
+    						textAlign: "left",
+    						enterTXT: "取消",
+    						cancelTXT: "更新",
+    						callEnter: () => { delayCheckVersion() },
+    						callCancel: () => { resetAndUpData() }
+    					})
+    				}
+    				else {
+    					(checkVersion && confirm(ASK + PS)) ? resetAndUpData(): delayCheckVersion()
+    				}
+    			}
+    		}
+    	} catch (e) { alert(e.stack) }
+    }
+    */
 
     function logVersionInfo(version = currentVersion, UPDATA_INFO = window.UPDATA_INFO) {
     	function lineWrap(str) {
@@ -442,13 +486,19 @@ window.upData = window.parent.upData || (function() {
     	
     	console[errUrls.length ? "error" : "info"](`upData.js: saveCacheFiles finish ${errUrls.length} error in ${numFiles} urls \n${errUrls.join("\n")}`)
     	window.loadAnimation && (loadAnimation.lock(false),loadAnimation.close());
+    	return errUrls.length;
     }
 
     return {
         get delayCheckVersion() { return delayCheckVersion },
+        get copyToCurrentCache() { return copyToCurrentCache },
+        
+        get ping() { return ping },
+        get checkLink() { return checkLink },
     	
         get removeAppCache() { return removeAppCache },
         get removeOldAppCache() { return removeOldAppCache },
+        get resetUpdataVersion() { return resetUpdataVersion },
         get resetAndUpData() { return resetAndUpData },
         get getUpDataVersion() { return getUpDataVersion },
         get autoUpData() { return autoUpData },

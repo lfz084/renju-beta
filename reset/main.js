@@ -58,124 +58,70 @@
     	}
     }
     
-    let online = false;
-    async function ping(url) {
-    	return new Promise(resolve => {
-    		const time = new Date().getTime();
-    		setTimeout(() => resolve(-1), 15 * 1000);
-    		fetch(url.split("?=")[0].split("#")[0] + "?cache=onlyNet")
-    			.then(response => response.ok ? resolve(new Date().getTime() - time) : resolve(-1))
-    	})
-    }
-    
     async function checkLink() {
-    	log("正在测试网络链接......<br>")
-    	return ping("index.html").then(time => {
-    		if (time >= 0) {
-    			log("网络链接正常<br>");
-    			online = true;
-    		}
-    		else {
-    			log("❌网络链接异常<br>");
-    			online = false;
-    		}
-    		return online;
-    	});
+    	return upData.checkLink(str => log(str + "<br>"))
     }
     
     async function upDataApp() {
     	log("<br>");
     	await updateServiceWorker()
-    	await refreshVersionInfos()
-    	await removeLocalStorage()
+    	upData.resetUpdataVersion()
     	await removeCaches()
+    	await refreshVersionInfos()
     	await updateCache()
     	toIndex()
     }
     
     async function updateCache() {
-    	if (!self.upData) return;
+    	log("<br>");
     	const files = (await loadJSON("Version/SOURCE_FILES.json")).files;
     	const urls = Object.keys(files).map(key => files[key]);
-    	await upData.saveCacheFiles(urls, "currentCache");
+    	const { currentCacheKey } = await serviceWorker.postMessage({cmd: "getCacheKeys"});
+    	const errCount = await upData.saveCacheFiles(urls, currentCacheKey);
+    	log(`缓存结束,${errCount}个文件错误<br>`)
+    }
+    
+    async function copyToCurrentCache() {
+    	log("<br>");
+    	upData.resetUpdataVersion()
+    	await serviceWorker.postMessage({cmd: "copyToCurrentCache"}).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`))
+    	toIndex()
     }
     
     async function logNewVersion() {
-    	if (!self.upData) return;
-    	log("正在搜索可用更新......<br>")
-    	const version = await upData.getUpDataVersion();
-    	if (version.isNewVersion) {
-    		async function fetchInfo(url) {
-    			try { return JSON.parse(await upData.fetchTXT(url)) } catch (e) {}
-    		}
-    		const info = await fetchInfo("Version/UPDATA_INFO.json");
-    		log((`发现新版本 ${version.version}` + upData.logVersionInfo(version.version, info)).split("\n").join("<br>") + "<br>");
-    		const logDiv = $("log");
-    		const btn = document.createElement("a");
-    		btn.innerHTML = "点击更新";
-    		btn.addEventListener("click", async () => await checkLink() && upDataApp(), true)
-    		logDiv.appendChild(btn);
+    	const up = await upData.searchUpdate();
+    	if (up) {
+    		log("正在搜索可用更新......<br>");
+			log(up.title.split("\n").join("<br>"));
+			if (up.action) {
+				const logDiv = $("log");
+				const btn = document.createElement("a");
+				btn.innerHTML = "点击" + up.actionLabel;
+				logDiv.appendChild(btn);
+				btn.addEventListener("click", async () => {
+					up.action == "copyToCurrentCache" ? (await checkLink() && copyToCurrentCache()) : up.action == "updateCache" ? (await checkLink() && updateCache()) : (await checkLink() && upDataApp());
+				}, true)
+			}
     	}
-    	else log("没有发现新版本<br>")
     }
     
     async function refreshVersionInfos() {
-    	return serviceWorker.postMessage({cmd: "refreshVersionInfos"})
+    	return serviceWorker.postMessage({cmd: "refreshVersionInfos"}, 8000)
     }
     
     async function removeServiceWorker() {
-    	return "serviceWorker" in navigator &&
-    		"getRegistrations" in navigator.serviceWorker &&
-    		navigator.serviceWorker.getRegistrations()
-    		.then(registrations => {
-    			const ps = [];
-    			registrations.map(registration => {
-    				if (window.location.href.indexOf(registration.scope) + 1) {
-    					ps.push(registration.unregister());
-    					log(`删除 serviceWorker ${registration.scope}<br>`);
-    				}
-    			})
-    			return Promise.all(ps);
-    		})
+    	return serviceWorker.removeServiceWorker(registration => log(`删除 serviceWorker ${registration.scope}<br>`))
     }
     
     async function updateServiceWorker() {
-    	return new Promise(resolve => {
-    		if ("serviceWorker" in navigator) {
-    			const ps = [];
-    			navigator.serviceWorker.getRegistrations()
-    				.then(registrations => {
-    					registrations.map(registration => {
-    						if (window.location.href.indexOf(registration.scope) + 1) {
-    							ps.push(registration.update());
-    							log(`更新 serviceWorker ${registration.scope}<br>`);
-    						}
-    					})
-    				})
-                    .then(() => Promise.all(ps))
-                	.then(() => resolve(ps[0]))
-                    .catch(() => {
-                        resolve();
-                    })
-    		}
-    		else resolve()
-    	})
+    	return serviceWorker.updateServiceWorker(registration => log(`更新 serviceWorker ${registration.scope}<br>`))
     }
     
     async function removeCaches() {
-    	return "caches" in window &&
-    		caches.keys()
-    		.then(keys => {
-    			const ps = [];
-    			keys.map(key => {
-    				ps.push(caches.delete(key));
-    				log(`删除 caches ${key}<br>`);
-    			})
-    			return Promise.all(ps);
-    		})
+    	return upData.removeAppCache(key => log(`删除 caches ${key}<br>`))
     }
     
-    async function removeLocalStorage() {
+    function removeLocalStorage() {
     	"localStorage" in window &&
     		Object.keys(localStorage).map(key => {
     			localStorage.removeItem(key);
@@ -212,7 +158,7 @@
 				await checkLink() && msg({
 					title: "请确认删除本地缓存后，更新到最新版本。本地数据库不会被删除",
 					butNum: 2,
-					enterFunction: upDataApp
+					enterFunction: () =>  (removeLocalStorage(), upDataApp())
 				})
 			}
 		},
