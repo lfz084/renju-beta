@@ -56,7 +56,7 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     }
     
     function onmessage(event) {
-    	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) {
+    	if (true && new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) {
     		return;
     	}
     	else if (typeof event.data == "object" && event.data.cmd) {

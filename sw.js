@@ -1,4 +1,4 @@
-    const DEBUG_SERVER_WORKER = true;
+    const DEBUG_SERVER_WORKER = false;
     const SCRIPT_VERSION = "v2024.23187";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
@@ -46,43 +46,15 @@
     //---------------------------------- loading -----------------------------------
     
     const load = (() => {
-    	let urls = [];
-    	let timer = null;
-
-    	function pushURL(url) {
-    		if (urls.indexOf(url) < 0) {
-    			urls.push(url);
-    		}
-    	}
-
-    	function removeURL(url) {
-    		let idx = urls.indexOf(url);
-    		if (idx + 1) {
-    			urls.splice(idx, 1);
-    		}
-    	}
-
-    	function interval() {
-    		if (urls.length == 0) {
-    			clearInterval(timer);
-    			timer = null;
-    			syncMsg(`load finish`)
-    		}
-    	}
-
+    	let countRequests = 0;
     	return {
     		loading: (url, client) => {
-    			let filename = url.split("/").pop().split("?")[0].split("#")[0];
-    			if (/\.css$|\.ttf$|\.woff$|\.html$|\.png$|\.gif$|\.jpg$/i.test(filename)) {
-    				if (!timer) {
-    					timer = setInterval(interval, 300);
-    				}
-    				syncMsg(`loading......`, client)
-    				pushURL(url);
-    			}
+    			countRequests++;
+    			countRequests == 1 && syncMsg(`loading......`, client);
     		},
-    		finish: (url) => {
-    			removeURL(url);
+    		finish: (url, client) => {
+    			countRequests && countRequests--;
+    			countRequests == 0 && syncMsg(`load finish`, client);
     		}
     	};
     })();
@@ -147,15 +119,15 @@
      * 从 currentCache 读取版本信息，如果没有就尝试联网更新，更新成功就初始化 currentCache
      */
 	var waitingCacheReady = undefined;
-	async function waitCacheReady(clientID) {
+	async function waitCacheReady(client) {
 		const url = formatURL(VERSION_JSON);
 		waitingCacheReady = waitingCacheReady || Promise.resolve()
-			.then(()=>postMsg({cmd: "log", msg: "waitingCacheReady......"}, clientID))
-    		.then(() => !currentVersionInfo && loadCache(url, currentCacheKey, clientID))
+			.then(()=>postMsg({cmd: "log", msg: "waitingCacheReady......"}, client))
+    		.then(() => !currentVersionInfo && loadCache(url, currentCacheKey, client))
 			.then(response => (response && response.ok) && response.json())
 			.then(json => json && (currentVersionInfo = json))
 			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
-			.then(() => !currentVersionInfo && onlyNet(url, currentCacheKey, clientID))
+			.then(() => !currentVersionInfo && onlyNet(url, currentCacheKey, client))
 			.then(response => (response && response.ok) && response.json())
 			.then(json => json && (currentVersionInfo = json))
 			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime(), true))
@@ -167,11 +139,11 @@
 	 * 从 updataCache 读取版本信息，如果失败就删除 updataCache
  	*/
  	var watingLoadUpdateVersionInfo;
- 	async function loadUpdateVersionInfo(clientID) {
+ 	async function loadUpdateVersionInfo(client) {
  		const url = formatURL(VERSION_JSON);
 		watingLoadUpdateVersionInfo = watingLoadUpdateVersionInfo || Promise.resolve()
- 			.then(()=>postMsg({cmd: "log", msg: "watingLoadUpdateVersionInfo......"}, clientID))
-    		.then(() => !updateVersionInfo && loadCache(url, updataCacheKey, clientID))
+ 			.then(()=>postMsg({cmd: "log", msg: "watingLoadUpdateVersionInfo......"}, client))
+    		.then(() => !updateVersionInfo && loadCache(url, updataCacheKey, client))
 			.then(response => (response && response.ok) && response.json())
 			.then(json => json && (updateVersionInfo = json))
 			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
@@ -182,16 +154,16 @@
 	 * 刷新版本信息
  	*/
 	var waitingRefreshVersionInfos;
-	async function refreshVersionInfos(clientID) {
+	async function refreshVersionInfos(client) {
 		const url = formatURL(VERSION_JSON);
 		waitingRefreshVersionInfos = waitingRefreshVersionInfos || Promise.resolve()
-			.then(() => postMsg({cmd: "log", msg: "refreshVersionInfos......"}, clientID))
+			.then(() => postMsg({cmd: "log", msg: "refreshVersionInfos......"}, client))
     		.then(() => currentVersionInfo = updateVersionInfo = null)
-    		.then(() => !currentVersionInfo && loadCache(url, currentCacheKey, clientID))
+    		.then(() => !currentVersionInfo && loadCache(url, currentCacheKey, client))
 			.then(response => (response && response.ok) && response.json())
 			.then(json => json && (currentVersionInfo = json))
 			.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
-			.then(() => !updateVersionInfo && loadCache(url, updataCacheKey, clientID))
+			.then(() => !updateVersionInfo && loadCache(url, updataCacheKey, client))
     		.then(response => (response && response.ok) && response.json())
     		.then(json => json && (updateVersionInfo = json))
     		.then(json => json && (json["status"] = json["status"] || CacheStatus.UPDATE, json["createTime"] = json["createTime"] || new Date().getTime()))
@@ -231,9 +203,9 @@
      * 把已经缓存的新版本复制到当前版本缓存中
      */
     var waitingCopyToCurrentCache
-    async function copyToCurrentCache(clientID) {
+    async function copyToCurrentCache(client) {
     	waitingCopyToCurrentCache = waitingCopyToCurrentCache || Promise.resolve()
-    		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache start"}, clientID))
+    		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache start"}, client))
     		.then(() => resetCache(currentCacheKey, updateVersionInfo))
     		.then(info => currentVersionInfo = info)
     		.then(() => Promise.all([caches.open(currentCacheKey), caches.open(updataCacheKey)]))
@@ -245,7 +217,7 @@
     			return Promise.all(ps);
     		})
     		.then(() => caches.delete(updataCacheKey))
-    		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache end"}, clientID))
+    		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache end"}, client))
     		.then(() => waitingCopyToCurrentCache = undefined)
     	return waitingCopyToCurrentCache;
     }
@@ -283,14 +255,14 @@
      * 计算是否要缓存文件
      */
     var waitingTryUpdate;
-    function tryUpdate(clientID) {
+    function tryUpdate(client) {
     	waitingTryUpdate = waitingTryUpdate || Promise.resolve()
     		.then(() => {
     			if (createTime &&
     				(firstUpdateCacheDelay < new Date().getTime() - createTime) &&
     				(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
     			) {
-    				updateCache(clientID)
+    				updateCache(client)
     			}
     		})
     		.then(() => setTimeout(() => { waitingTryUpdate = undefined }, Math.min(180 * 1000, refreshVersionInterval, firstUpdateCacheDelay)))
@@ -301,11 +273,11 @@
      * 联网刷新版本信息，成功后缓存离线资源，新版本缓存完成后通知用户
      */
     var waitingUpdateCache = undefined;
-    async function updateCache(clientID) {
+    async function updateCache(client) {
     	const url = formatURL(VERSION_JSON);
     	waitingUpdateCache = waitingUpdateCache || Promise.resolve()
-    		.then(() => (postMsg({cmd: "log", msg: "updating......"}, clientID), updateStatus = CacheStatus.UPDATING))
-    		.then(() => onlyNet(url, undefined, clientID))
+    		.then(() => (postMsg({cmd: "log", msg: "updating......"}, client), updateStatus = CacheStatus.UPDATING))
+    		.then(() => onlyNet(url, undefined, client))
     		.then(response => (response && response.ok) ? response.json() : Promise.reject("updateCache: 联网刷新版本信息失败，跳过后续更新"))
     		.then(versionInfo => versionInfo["version"] == currentVersionInfo["version"] ? { cacheKey: currentCacheKey, oldInfo: currentVersionInfo, newInfo: versionInfo } : { cacheKey: updataCacheKey, oldInfo: updateVersionInfo || JSON.parse(JSON.stringify(currentVersionInfo, null, 2)), newInfo: versionInfo })
     		.then(({cacheKey, oldInfo, newInfo}) => {
@@ -326,7 +298,7 @@
     			lastRefreshTime = new Date().getTime() + refreshVersionInterval;
 				return caches.setItem("lastRefreshTime", lastRefreshTime)
 			})
-    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || e }, clientID))
+    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || e }, client))
     		.then(() => (updateStatus = CacheStatus.UPDATE, waitingUpdateCache = undefined))
     	return waitingUpdateCache;
     }
@@ -350,16 +322,16 @@
     /**
      * 从网络加载 response，如果没有找到，返回标记为404 错误的response
      */
-    function onlyNet(url, version, clientID) {
+    function onlyNet(url, version, client) {
     	const nRequest = new Request(url.split("?")[0].split("#")[0] + "?v=" + parseInt(new Date().getTime()/1000), requestInit);
-    	clientID && load.loading(url, clientID);
+    	client && load.loading(url, client);
     	return fetch(nRequest)
     		.then(response => {
-    			clientID && load.finish(url);
+    			client && load.finish(url, client);
     			return response;
     		})
     		.catch(err => {
-    			clientID && load.finish(url);
+    			client && load.finish(url, client);
     			return new Response(request_reject, response_404_init_data)
     		})
     }
@@ -367,7 +339,7 @@
 	/**
 	 * 从缓存读取 response，如果没有找到，返回标记为404 错误的response
  	*/
-    function loadCache(url, version, clientID) {
+    function loadCache(url, version, client) {
     	return caches.open(version)
     		.then(cache => {
     			return cache.match(new Request(url, requestInit))
@@ -383,19 +355,19 @@
     /**
      * 返回标记为404 错误的response, HTML 页面做特殊处理
      */
-    function fetchError(err, url, version, clientID) {
+    function fetchError(err, url, version, client) {
     	const type = url.split("?")[0].split("#")[0].split(".").pop();
     	
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
     		const _URL = formatURL(request.url, version);
-    		postMsg({cmd: "error", msg: `loadCache response: 404.html`}, clientID)
-    		return loadCache(_URL, version, clientID)
+    		postMsg({cmd: "error", msg: `loadCache response: 404.html`}, client)
+    		return loadCache(_URL, version, client)
     			.then(response => {
     				return response.ok ? response : Promise.reject();
     			})
     			.catch(() => {
-    				postMsg({cmd: "error", msg: `create response: 404.html`}, clientID);
+    				postMsg({cmd: "error", msg: `create response: 404.html`}, client);
     				return new Response(response_err_html, response_200_init_html)
     			})
     	}
@@ -408,8 +380,8 @@
      * 从网络加载 response，如果没有找到，返回标记为404 错误的response
      * response.ok 为 true 时，保存在缓存中
      */
-    function fetchAndPutCache(url, version, clientID) {
-    	return onlyNet(url, version, clientID)
+    function fetchAndPutCache(url, version, client) {
+    	return onlyNet(url, version, client)
     		.then(response => {
     			if (response.ok && url.indexOf("blob:http") == -1) {
     				let cloneRes = response.clone();
@@ -422,38 +394,38 @@
 	/**
 	 * 从缓存优先获取 response，如果没有找到，返回标记为404 错误的response
 	 */
-    function cacheFirst(url, version, clientID) {
-    	return loadCache(url, version, clientID)
+    function cacheFirst(url, version, client) {
+    	return loadCache(url, version, client)
     		.then(response => {
     			return response.ok ? response : Promise.reject();
     		})
     		.catch(() => {
-    			return fetchAndPutCache(url, version, clientID);
+    			return fetchAndPutCache(url, version, client);
     		})
     		.then(response => {
     			return response.ok ? response : Promise.reject();
     		})
     		.catch(err => {
-    			return fetchError(err, url, version, clientID)
+    			return fetchError(err, url, version, client)
     		})
     }
 	
 	/**
 	 * 从网络优先获取 response，如果没有找到，返回标记为404 错误的response
 	 */
-    function netFirst(url, version, clientID) {
-    	return fetchAndPutCache(url, version, clientID)
+    function netFirst(url, version, client) {
+    	return fetchAndPutCache(url, version, client)
     		.then(response => {
     			return response.ok ? response : Promise.reject();
     		})
     		.catch(() => {
-    			return loadCache(url, version, clientID)
+    			return loadCache(url, version, client)
     		})
     		.then(response => {
     			return response.ok ? response : Promise.reject();
     		})
     		.catch(err => {
-    			return fetchError(err, url, version, clientID)
+    			return fetchError(err, url, version, client)
     		})
     }
     
@@ -478,17 +450,17 @@
     	/*
     	event.waitUntil()
     	*/
-    	//postMsg({ cmd: "alert", msg: `install, ${currentCacheKey}, ${new Date().getTime()}` }, event.clientID);
+    	//postMsg({ cmd: "alert", msg: `install, ${currentCacheKey}, ${new Date().getTime()}` }, event.clientId);
     });
 
     self.addEventListener('activate', function(event) {
-    	//postMsg({ cmd: "alert", msg: `activate, ${currentCacheKey}, ${new Date().getTime()}` }, event.clientID)
+    	//postMsg({ cmd: "alert", msg: `activate, ${currentCacheKey}, ${new Date().getTime()}` }, event.clientId)
     });
     
     self.addEventListener('fetch', function(event) {
     	if (event.request.url.indexOf(home) == 0) {
-    		const responsePromise = waitCacheReady(event.clientID)
-    			.then(() => tryUpdate(event.clientID))
+    		const responsePromise = waitCacheReady(event.clientId)
+    			.then(() => tryUpdate(event.clientId))
     			.then(() => {
     				const _URL = formatURL(event.request.url, currentCacheKey);
     				const execStore = /\?cache\=onlyNet|\?cache\=onlyCache|\?cache\=netFirst|\?cache\=cacheFirst/.exec(event.request.url);
@@ -511,8 +483,8 @@
     					"&cacheKey=updateCache": updataCacheKey,
     					"default": currentCacheKey
     				}[cacheKey];
-    				postMsg(`fetch Event url: ${decodeURIComponent(_URL)}`, event.clientID);
-    				return waitResponse(_URL, version, event.clientID)
+    				postMsg(`fetch Event url: ${decodeURIComponent(_URL)}`, event.clientId);
+    				return waitResponse(_URL, version, event.clientId)
     					.then(response => addHTMLCode(response));
     			})
     			.catch(err => {
@@ -533,6 +505,8 @@
 		if (5000 < new Date().getTime() - lastDelayMessages) {
 			clearInterval(log2cacheTimer);
 			postDelayMessages();
+			/*预防 serviceWorker 意外重启，关闭加载动画*/
+			load.finish(url, client);
 		}
 	}, 1000)
 		
@@ -576,47 +550,47 @@
 	}
 	
 	const COMMAND = {
-		formatURL: async (data, clientID) => {
+		formatURL: async (data, client) => {
 		 	data["resolve"] = formatURL(...getArgs(data))
 		},
-		postDelayMessages: async (data, clientID) => {
+		postDelayMessages: async (data, client) => {
 			postDelayMessages();
 			data["resolve"] = true
 		},
-		waitCacheReady: async (data, clientID) => {
+		waitCacheReady: async (data, client) => {
 			waitingCacheReady = undefined;
 			currentVersionInfo = null;
-			return waitCacheReady(clientID).then(() => data["resolve"] = true)
+			return waitCacheReady(client).then(() => data["resolve"] = true)
 		},
-		getCacheKeys: async (data, clientID) => {
+		getCacheKeys: async (data, client) => {
 			data["resolve"] = {currentCacheKey, updataCacheKey}
 		},
-		getVersionInfos: async (data, clientID) => {
+		getVersionInfos: async (data, client) => {
 			data["resolve"] = {currentVersionInfo, updateVersionInfo}
 		},
-		refreshVersionInfos: async (data, clientID) => {
-			return refreshVersionInfos(clientID).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
+		refreshVersionInfos: async (data, client) => {
+			return refreshVersionInfos(client).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
 		},
-		checkCache: async (data, clientID) => {
+		checkCache: async (data, client) => {
 			return checkCache(...getArgs(data)).then(rt => data["resolve"] = rt)
 		},
-		copyToCurrentCache: async (data, clientID) => {
-		 	return copyToCurrentCache(clientID).then(() => data["resolve"] = true).catch(() => data["resolve"] = false)
+		copyToCurrentCache: async (data, client) => {
+		 	return copyToCurrentCache(client).then(() => data["resolve"] = true).catch(() => data["resolve"] = false)
 		},
 	}
     
     self.addEventListener('message', function(event) {
     	const data = { cmd: event.data.cmd, time: event.data.time, args: event.data.args, arg: event.data.arg };
-    	const clientID = event.clientID;
+    	const client = event.clientId;
     	const fun = COMMAND[data.cmd];
     	if (typeof data == "object" && fun) {
-    		fun(data, clientID)
+    		fun(data, client)
     			.then(() => {
-    				syncMsg(data, clientID)
+    				syncMsg(data, client)
     			})
     	}
     	else {
-    		syncMsg(data, clientID)
+    		syncMsg(data, client)
     	}
     });
     

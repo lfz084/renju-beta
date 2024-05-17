@@ -183,8 +183,8 @@ window.loadApp = (() => { // 按顺序加载应用
     	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && isTopWindow && (await openVconsole());
     	vconsoleSwitch == openVconsoleSwitch.DELAY_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
 		
-		const cacheKeys = caches && [...(await caches.keys())] || [];
-		caches && console.info(`caches: [${cacheKeys}]`);
+		const cacheKeys = "caches" in self && [...(await caches.keys())] || [];
+		"caches" in self && console.info(`caches: [${cacheKeys}]`);
 		!fullscreenEnabled && console.info(logTestBrowser());
     	
     	window.SOURCE_FILES = window.SOURCE_FILES || (await loadJSON("Version/SOURCE_FILES.json")).files;
@@ -228,8 +228,10 @@ window.loadApp = (() => { // 按顺序加载应用
                 [SOURCE_FILES["msgbox"]],
                 [SOURCE_FILES["mainUI"]]]
 			}];
-        
+			
+        mlog(`url: ${window.location.href}`)
         mlog(`body onload`)
+        
         await loadScriptAll([
         	[SOURCE_FILES["loadAnimation"]],
         	[SOURCE_FILES["upData"]],
@@ -246,7 +248,7 @@ window.loadApp = (() => { // 按顺序加载应用
         	await serviceWorker.registerServiceWorker();
     	}
     	
-    	if (navigator.serviceWorker.controller) {
+    	if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         	mlog("refreshVersionInfos ......");
         	await upData.refreshVersionInfos();
     	}
@@ -292,13 +294,14 @@ window.loadApp = (() => { // 按顺序加载应用
     }catch(err) {
     	const ASK = `❌加载过程出现了错误...\n${err && err.stack || err}\n\n`;
     	const PS = `是否重置数据\n\n`;
-    	if (true) { 
-    		confirm(ASK + PS) ? window.location.href = "upData.html" : 	window.reloadApp();
-    	}
-    	else {
+    	if (window.vConsole || window.parent.vConsole || window["fullscreenUI"] && fullscreenUI.contentWindow.vConsole) {
     		console.error(ASK);
-    		setTimeout(() => {}, 6000)
-    		caches.open("log").then(cache => cache.match("log")).then(response => response.text()).then(console.log)
+    		setTimeout(() => {
+    			"caches" in self && caches.open("log").then(cache => cache.match("log")).then(response => response.text()).then(console.log)
+    		}, 6000)
+    	}
+    	else { 
+    		confirm(ASK + PS) ? window.location.href = "upData.html" : 	window.reloadApp();
     	}
     }
     }
