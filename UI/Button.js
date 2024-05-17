@@ -1,16 +1,16 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["button"] = "v2024.23118";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["button"] = "v2024.23187";
 (function(global, factory) {
 	(global = global || self, factory(global));
 }(this, (function(exports) {
 	'use strict';
 
 	const ANIMATION_TIMEOUT = 300;
-	const TEST_BUTTON = false;
+	const DEBUG_BUTTON = false;
 	let isMenuShow = false; //不允许同时打开两个菜单
 
 	function log(param, type = "log") {
 		const print = console[type] || console.log;
-		TEST_BUTTON && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[Button.js]  ${ param}`);
+		DEBUG_BUTTON && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[Button.js]  ${ param}`);
 	}
 
 	// ---------------------- groups ------------------------ 

@@ -10,7 +10,8 @@
 
     function log(text) { 
     	const logDiv = $("log");
-    	logDiv.innerHTML += text;
+    	const innerHTML = logDiv.innerHTML.replace(/(\<br\>|\n)+$/ig, "") + "<br>"
+    	logDiv.innerHTML = innerHTML + text.replace(/^(\<br\>|\n)+|(\<br\>|\n)+$/ig, "") + "<br>";
     	logDiv.scrollTop += 500;
     	mainUI.viewport.scrollTop();
     }
@@ -67,7 +68,7 @@
     	await updateServiceWorker()
     	upData.resetUpdataVersion()
     	await removeCaches()
-    	await refreshVersionInfos()
+    	await serviceWorker.postMessage({cmd: "waitCacheReady"})
     	await updateCache()
     	toIndex()
     }
@@ -83,7 +84,8 @@
     
     async function copyToCurrentCache() {
     	log("<br>");
-    	upData.resetUpdataVersion()
+    	await updateServiceWorker();
+    	upData.resetUpdataVersion();
     	await serviceWorker.postMessage({cmd: "copyToCurrentCache"}).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`))
     	toIndex()
     }
@@ -94,19 +96,17 @@
     		log("正在搜索可用更新......<br>");
 			log(up.title.split("\n").join("<br>"));
 			if (up.action) {
+				async function onclick() {
+					btn.removeEventListener("click", onclick, true);
+					up.action == "copyToCurrentCache" ? (await checkLink() && copyToCurrentCache()) : up.action == "updateCache" ? (await checkLink() && updateCache()) : (await checkLink() && upDataApp());
+				}
 				const logDiv = $("log");
 				const btn = document.createElement("a");
 				btn.innerHTML = "点击" + up.actionLabel;
 				logDiv.appendChild(btn);
-				btn.addEventListener("click", async () => {
-					up.action == "copyToCurrentCache" ? (await checkLink() && copyToCurrentCache()) : up.action == "updateCache" ? (await checkLink() && updateCache()) : (await checkLink() && upDataApp());
-				}, true)
+				btn.addEventListener("click", onclick, true)
 			}
     	}
-    }
-    
-    async function refreshVersionInfos() {
-    	return serviceWorker.postMessage({cmd: "refreshVersionInfos"}, 8000)
     }
     
     async function removeServiceWorker() {
@@ -143,7 +143,7 @@
     		if(s <= 0) {
     			clearInterval(timer);
     			timer = null;
-    			window.top.location.href = "index.html";
+    			window.top.location.href = `index.html?v=${new Date().getTime()}`;
     		}
     	}, 1000);
     }

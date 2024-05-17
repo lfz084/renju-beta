@@ -1,11 +1,11 @@
 window.DBClient = (() => {
     "use strict";
     
-    const TEST_DBClient = false;
+    const DEBUG_DBClient = false;
 
     function log(param, type = "log") {
         const  print = console[type] || console.log;
-        TEST_DBClient && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[dbclient.js] ${ param}`);
+        DEBUG_DBClient && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[dbclient.js] ${ param}`);
     }
     
     //----------------------------------------------------------

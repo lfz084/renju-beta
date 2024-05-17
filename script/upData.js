@@ -1,4 +1,3 @@
-// import removeServiceWorker form "serviceWorker.js"
 window.upData = window.parent.upData || (function() {
     'use strict';
 	const DEBUG_UPDATA = false;
@@ -9,14 +8,11 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const elements = document.getElementsByTagName("version");
-    const htmlVersion = (elements && elements[0]) ? elements[0].getAttribute("v") : "";
-    const oldVersion = localStorage.getItem(keyRenjuVersion);
-	let currentVersion = oldVersion || htmlVersion;
+    const scriptVersion = "v2024.23187";
+	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
     let checkVersion = isCheckVersion();
-    let isLogNewVersionInfo = oldVersion != currentVersion;
     
     //-------------------------- caches localStorage -----------------------------------
     
@@ -26,7 +22,7 @@ window.upData = window.parent.upData || (function() {
     			try {
     				key = key.toString();
     				value = value.toString();
-    				caches.open("settings").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
+    				caches.open("localCache").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
     			} catch (e) { resolve() }
     		});
     	}
@@ -35,7 +31,7 @@ window.upData = window.parent.upData || (function() {
     		return new Promise(resolve => {
     			try {
     				key = key.toString();
-    				caches.open("settings").then(cache => cache.match(new Request(key))).then(response => response.text()).then(value => resolve(value)).catch(() => resolve());
+    				caches.open("localCache").then(cache => cache.match(new Request(key))).then(response => response.text()).then(value => resolve(value)).catch(() => resolve());
     			} catch (e) { resolve() }
     		});
     	}
@@ -44,7 +40,7 @@ window.upData = window.parent.upData || (function() {
     		return new Promise(resolve => {
     			try {
     				key = key.toString();
-    				caches.open("settings").then(cache => cache.delete(new Request(key))).then(() => resolve(true)).catch(() => resolve(false));
+    				caches.open("localCache").then(cache => cache.delete(new Request(key))).then(() => resolve(true)).catch(() => resolve(false));
     			} catch (e) { resolve(false) }
     		});
     	}
@@ -59,18 +55,24 @@ window.upData = window.parent.upData || (function() {
         })
     }
     
+    async function isFinally(promise) {
+    	let isF = true,
+    		t = {};
+    	await Promise.race([promise, t])
+    		.then(v => v === t && (isF = false))
+    	return isF;
+    }
+    
+    async function removeFinallyPromise(promiseArray) {
+    	for (let j = promiseArray.length - 1; j >= 0; j--) {
+    		if (await isFinally(promiseArray[j])) {
+    			promiseArray.splice(j, 1);
+    		}
+    	}
+    }
+    
     function absoluteURL(url) {
     	return new Request(url).url;
-    }
-    
-    function delayCheckVersion() {
-    	checkVersion = false;
-    	localStorage.setItem("delayCheckVersion", new Date().getTime());
-    }
-    
-    function isCheckVersion() {
-    	const notUpDataTime = parseInt(localStorage.getItem("delayCheckVersion")) || 0;
-        return (new Date().getTime() - notUpDataTime) > 24 * 3600 * 1000
     }
     
     async function ping(url) {
@@ -96,43 +98,8 @@ window.upData = window.parent.upData || (function() {
     	});
     }
 
-    async function removeAppCache(callback = ()=>{}, filter = () => true) {
-        if ("caches" in window) {
-            const cacheNames = await caches.keys();
-            cacheNames && cacheNames.map(cacheName => {
-            	if(filter(cacheName)) {
-            		caches.delete(cacheName)
-            		log(`delete cache: ${cacheName}`, "info");
-            		callback(cacheName)
-            	}
-            })
-        }
-    }
-
-    async function removeOldAppCache() {
-        return removeAppCache(undefined, cacheName => cacheName != "settings" && cacheName != currentVersion && cacheName != htmlVersion && cacheName != updateVersion)
-    }
-
-    async function resetApp() {
-    	if (!(await checkLink())) {
-    		alert("网络异常");
-    		return;
-    	}
-        await serviceWorker.updateServiceWorker()
-        await refreshVersionInfos(undefined)
-        await removeAppCache()
-    }
-
-    function resetUpdataVersion() {
-        localStorage.removeItem(keyRenjuVersion);
-    }
+    //------------------------- log -----------------------------------------------------
     
-    function saveAppVersion(version) {
-    	("caches" in window) && caches.setItem(keyRenjuVersion, version);
-    	localStorage.setItem(keyRenjuVersion, version);
-    	localStorage.removeItem("delayCheckVersion");
-    }
-
     function strLen(str, len, char = " ", align = "left") {
         if (align == "left") {
             return (str + new Array(len).join(char)).slice(0, len)
@@ -185,16 +152,72 @@ window.upData = window.parent.upData || (function() {
     }
 
     function logVersions() {
-        let Msg = ` checkVersion: ${checkVersion}\n`;
-        Msg += `_____________________\n\n `;
-        Msg += `${strLen("主页  ", 30)}  版本号: ${currentVersion}\n`;
-        for (let key in window.SCRIPT_VERSIONS) {
-            Msg += `${strLen(key + ".js  ", 20, "-")}  版本号: ${window.SCRIPT_VERSIONS[key]}\n`;
-        }
-        Msg += `_____________________\n\n `;
+        let Msg = "";
+        Msg += `currentCache 缓存版本号: ${currentVersion}\n`;
+        Msg += `updateCache 缓存版本号: ${updateVersion}\n`;
         return Msg;
     }
-
+    
+    function logVersionInfo(version = currentVersion, UPDATA_INFO = window.UPDATA_INFO) {
+    	function lineWrap(str) {
+    		return str.split(/\\n|<br>/).join("\n")
+    	}
+    
+    	let infoArr = UPDATA_INFO[version],
+    		Msg = "";
+    	if (infoArr) {
+    		Msg += `\n _____________________ `;
+    		Msg += `\n 版本： ${version}\n`;
+    		for (let i = 0; i < infoArr.length; i++)
+    			Msg += `\n${strLen(i+1, 2)}. ${lineWrap(infoArr[i])}`
+    		Msg += `\n _____________________ `;
+    	}
+    	return Msg;
+    }
+    
+    function logUpDataCompleted() {
+    	if ("localStorage" in window) {
+    		if (checkVersion && localStorage.getItem(keyRenjuVersion) != currentVersion) {
+    			let Msg = "";
+    			Msg += `摆棋小工具 更新完毕`
+    			Msg += logVersionInfo();
+    			return Msg;
+    		}
+    	}
+    	return "";
+    }
+    
+    //------------------------- Version control --------------------------------------------------------
+    
+    function delayCheckVersion() {
+    	checkVersion = false;
+    	localStorage.setItem("delayCheckVersion", new Date().getTime());
+    }
+    
+    function isCheckVersion() {
+    	const notUpDataTime = parseInt(localStorage.getItem("delayCheckVersion")) || 0;
+    	return (new Date().getTime() - notUpDataTime) > 24 * 3600 * 1000
+    }
+    
+    function resetUpdataVersion() {
+    	localStorage.removeItem(keyRenjuVersion);
+    	localStorage.removeItem("delayCheckVersion");
+    }
+    
+    function saveAppVersion(version) {
+    	("caches" in window) && caches.setItem(keyRenjuVersion, version);
+    	localStorage.setItem(keyRenjuVersion, version);
+    	localStorage.removeItem("delayCheckVersion");
+    }
+    
+    async function refreshVersionInfos() {
+    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 8000)
+    		.then(({ currentVersionInfo, updateVersionInfo }) => {
+    			currentVersion = currentVersionInfo && currentVersionInfo.version;
+    			updateVersion = updateVersionInfo && updateVersionInfo.version;
+    		})
+    }
+    
     async function checkScriptVersion(filename) {
         const ver = window.SCRIPT_VERSIONS[filename];
         log(`checkScriptVersion [${[filename, ver || "undefined"]}]`, "info");
@@ -214,18 +237,17 @@ window.upData = window.parent.upData || (function() {
     }
 
     async function checkAppVersion() {
-        log(`checkAppVersion {currentVersion: ${currentVersion}, htmlVersion: ${htmlVersion}}`, "info")
+        log(`checkAppVersion {currentVersion: ${currentVersion}, scriptVersion: ${scriptVersion}}`, "info")
         if ("localStorage" in window) {
-            const ASK = `有新的更新\n\n 当前版本号: ${currentVersion} \n 新的版本号: ${htmlVersion}\n${logVersionInfo(htmlVersion)}\n`;
+            const ASK = `有新的更新\n\n 当前版本号: ${currentVersion} \n 新的版本号: ${scriptVersion}\n${logVersionInfo(scriptVersion)}\n`;
             const PS = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
-            if (currentVersion != htmlVersion) {
+            if (currentVersion != scriptVersion) {
                 if (checkVersion && confirm(ASK + PS)) {
                     if (!(await checkLink())) {
                     	alert("网络异常");
                     	return;
                     }
                     await serviceWorker.updateServiceWorker();
-                    await refreshVersionInfos(undefined)
                     await removeAppCache();
                     resetUpdataVersion();
                     await window.reloadApp()
@@ -237,6 +259,8 @@ window.upData = window.parent.upData || (function() {
         }
     }
     
+    //------------------------ update -----------------------------------------------------
+    
     async function resetAndUpData() {
     	if (!(await checkLink())) {
     		alert("网络异常");
@@ -245,16 +269,7 @@ window.upData = window.parent.upData || (function() {
     	await serviceWorker.updateServiceWorker();
     	await removeAppCache();
         resetUpdataVersion();
-    	await refreshVersionInfos(undefined)
         await window.reloadApp();
-    }
-
-    async function refreshVersionInfos() {
-    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 8000)
-    		.then(({currentVersionInfo, updateVersionInfo}) => {
-    			currentVersion = currentVersionInfo.version;
-    			updateVersion = updateVersionInfo.version;
-    		})
     }
 
     async function fetchTXT(url) {
@@ -266,7 +281,6 @@ window.upData = window.parent.upData || (function() {
         const txt = await fetchTXT("Version/SOURCE_FILES.json");
         const versionCode = (/\"v\d+\.*\d*\"/i).exec(txt);
         const version = versionCode ? String(versionCode).split(/[\"\;]/)[1] : undefined;
-        updateVersion = version;
         return {
             version: version,
             isNewVersion: version && version != currentVersion
@@ -274,8 +288,41 @@ window.upData = window.parent.upData || (function() {
     }
     
     async function copyToCurrentCache() {
-    	resetUpdataVersion()
-    	return checkLink().then(online => online && serviceWorker.postMessage({cmd: "copyToCurrentCache"})).then(() => window.reloadApp())
+    	await serviceWorker.updateServiceWorker();
+    	resetUpdataVersion(); 
+    	return checkLink()
+    		.then(online => online && serviceWorker.postMessage({cmd: "copyToCurrentCache"}))
+    		.then(() => { 
+    			/*延迟刷新，避开 Firefox serviceWorker fetch event respondWith bug*/
+    			setTimeout(()=>window.reloadApp(), 3000);
+    			(window.warn || window["fullscreenUI"] && fullscreenUI.contentWindow.warn || alert)("更新完成，3秒后刷新");
+    		})
+    }
+    
+    async function removeAppCache(callback = () => {}, filter = () => true) {
+    	if ("caches" in window) {
+    		const cacheNames = await caches.keys();
+    		cacheNames && cacheNames.map(cacheName => {
+    			if (filter(cacheName)) {
+    				caches.delete(cacheName)
+    				log(`delete cache: ${cacheName}`, "info");
+    				callback(cacheName)
+    			}
+    		})
+    	}
+    }
+    
+    async function removeOldAppCache() {
+    	return removeAppCache(undefined, cacheName => cacheName != "localCache" && cacheName != currentVersion)
+    }
+    
+    async function resetApp() {
+    	if (!(await checkLink())) {
+    		alert("网络异常");
+    		return;
+    	}
+    	await serviceWorker.updateServiceWorker()
+    	await removeAppCache()
     }
     
     async function searchUpdate() {
@@ -293,7 +340,6 @@ window.upData = window.parent.upData || (function() {
     			rt.warn = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
     			rt.action = Cached ? "copyToCurrentCache" : "update";
     			rt.actionLabel = Cached ? "缓存" : "更新";
-    			rt.fun = () => Cached ? copyToCurrentCache() : resetAndUpData()
     		}
     		else {
     			const ck = await serviceWorker.postMessage({ cmd: "checkCache", arg: "currentCache" })
@@ -342,37 +388,10 @@ window.upData = window.parent.upData || (function() {
     }
     */
 
-    function logVersionInfo(version = currentVersion, UPDATA_INFO = window.UPDATA_INFO) {
-    	function lineWrap(str) {
-    		return str.split(/\\n|<br>/).join("\n")
-    	}
-    	
-    	let infoArr = UPDATA_INFO[version],
-    		Msg = "";
-    	if (infoArr) {
-    		Msg += `\n _____________________ `;
-    		Msg += `\n 版本： ${version}\n`;
-    		for (let i = 0; i < infoArr.length; i++)
-    			Msg += `\n${strLen(i+1, 2)}. ${lineWrap(infoArr[i])}`
-    		Msg += `\n _____________________ `;
-    	}
-    	return Msg;
-    }
+    //------------------------ cache -----------------------------------------
     
-    function logUpDataCompleted() {
-    	if ("localStorage" in window) {
-    		if (isLogNewVersionInfo && checkVersion) {
-    			let Msg = "";
-    			Msg += `摆棋小工具 更新完毕`
-    			Msg += logVersionInfo();
-    			isLogNewVersionInfo = false;
-    			return Msg;
-    		}
-    	}
-    	return "";
-    }
-    
-    const myInit = {cache: "no-store", mode: 'cors'};
+    const requestInit = {cache: "no-store", mode: 'cors'};
+    Object.freeze(requestInit);
     
     function getUrlVersion(version) {
     	return "?v=" + version;
@@ -400,36 +419,20 @@ window.upData = window.parent.upData || (function() {
     	}
     	return true;
     }
-    
-    async function isFinally(promise) {
-    	let isF = true,
-    		t = {};
-    	await Promise.race([promise, t])
-    		.then(v => v === t && (isF = false))
-    	return isF;
-    }
-    
-	async function removeFinallyPromise(promiseArray) {
-		for (let j = promiseArray.length - 1; j >= 0; j--) {
-			if (await isFinally(promiseArray[j])) {
-				promiseArray.splice(j, 1);
-			}
-		}
-	}
 	
     async function loadCache(cache, url) {
     	log(` loadCache ${url}`)
-    	return await cache.match(new Request(url, myInit));
+    	return await cache.match(new Request(url, requestInit));
     }
     
     async function putCache(cache, url, response) {
     	log(` putCache ${url}`)
-    	return await cache.put(new Request(url, myInit), response)
+    	return await cache.put(new Request(url, requestInit), response)
     }
     
     async function downloadToCache(url, cache) {
     	try{
-			const response = await fetch(new Request(url.split("?")[0] + "?v=" + new Date().getTime(), myInit));
+			const response = await fetch(new Request(url.split("?")[0] + "?v=" + new Date().getTime(), requestInit));
     		if (response.ok) {
     			await putCache(cache, url, response);
     			return await loadCache(cache, url)
@@ -489,27 +492,28 @@ window.upData = window.parent.upData || (function() {
     }
 
     return {
-        get delayCheckVersion() { return delayCheckVersion },
-        get copyToCurrentCache() { return copyToCurrentCache },
-        
         get ping() { return ping },
         get checkLink() { return checkLink },
-    	
-        get removeAppCache() { return removeAppCache },
-        get removeOldAppCache() { return removeOldAppCache },
+        
+        get isCheckVersion() { return isCheckVersion },
+        get delayCheckVersion() { return delayCheckVersion },
+        get currentVersion() { return currentVersion},
+        get saveAppVersion() { return saveAppVersion },
         get resetUpdataVersion() { return resetUpdataVersion },
-        get resetAndUpData() { return resetAndUpData },
         get getUpDataVersion() { return getUpDataVersion },
-        get autoUpData() { return autoUpData },
-        get searchUpdate() { return searchUpdate },
         get refreshVersionInfos() { return refreshVersionInfos },
         get checkAppVersion() { return checkAppVersion },
         get checkScriptVersion() { return checkScriptVersion },
+    	
+        get removeAppCache() { return removeAppCache },
+        get removeOldAppCache() { return removeOldAppCache },
+        get resetAndUpData() { return resetAndUpData },
+        get autoUpData() { return autoUpData },
+        get searchUpdate() { return searchUpdate },
         get resetApp() { return resetApp },
         get fetchTXT() { return fetchTXT },
-        get currentVersion() { return currentVersion},
-        get saveAppVersion() { return saveAppVersion },
         get saveCacheFiles() { return saveCacheFiles },
+        get copyToCurrentCache() { return copyToCurrentCache },
         
         get logCache() { return logCache },
         get logCaches() { return logCaches },

@@ -2,11 +2,11 @@
     (global = global || self, factory(global));
 }(this, (function(exports) {
     'use strict';
-    const TEST_LOADFILE = false;
+    const DEBUG_LOADFILE = false;
     
     function log(param, type = "log") {
         const print = console[type] || console.log;
-        TEST_LOADFILE && window.DEBUG && (true || window.vConsole || window.parent.vConsole) && print(`[loadFile.js]  ${ param}`);
+        DEBUG_LOADFILE && window.DEBUG && (true || window.vConsole || window.parent.vConsole) && print(`[loadFile.js]  ${ param}`);
     }
 
     //------------------------ loadFont ------------------
@@ -30,7 +30,7 @@
     }
     
     function formatURL(url) {
-    	return url.split("?")[0].split("#")[0] + "?v=" + new Date().getTime();
+    	return url.split("?")[0].split("#")[0] + "?v=" + parseInt(new Date().getTime()/1000);
     }
     
     function getFileName(url) {

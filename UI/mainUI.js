@@ -4,11 +4,11 @@
 window.mainUI = (function() {
 	'use strict';
 	const debug = 0;
-	const TEST_MAINUI = false;
+	const DEBUG_MAINUI = false;
 	
 	function log(param, type = "log") {
 		const print = console[type] || console.log;
-		TEST_MAINUI && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[mainUI.js]  ${ param}`);
+		DEBUG_MAINUI && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[mainUI.js]  ${ param}`);
 	}
 
 	//--------------------------- 设置主界面框架，调整窗口比例 --------------------------------------------------

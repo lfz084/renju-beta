@@ -1,15 +1,15 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23118";
+self.SCRIPT_VERSIONS["renju"] = "v2024.23187";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
-    const TEST_LOADAPP = true;
+    const DEBUG_LOADAPP = true;
 
     //--------------------- log -----------------------
 
     function log(param, type = "log") {
         const print = console[type] || console.log;
-    	if (TEST_LOADAPP && window.DEBUG && (window.vConsole || window.parent.vConsole)) {
+    	if (DEBUG_LOADAPP && window.DEBUG && (window.vConsole || window.parent.vConsole)) {
             const MSG = `${param}`;
             print(`[loadApp.js]  ${MSG}`);
             "mlog" in window && typeof mlog == "function" && mlog(MSG);
@@ -143,7 +143,7 @@ window.loadApp = (() => { // 按顺序加载应用
         localStorage.setItem("reloadCount", ++reloadCount);
         const url = window.location.href.split("?")[0] + `?v=${new Date().getTime()}${codeURL ? "#" + codeURL : ""}`
         reloadCount > 16 && (localStorage.removeItem("reloadCount"),  "upData" in window && (await upData.resetApp()));
-        window.location.href = url;
+        window.parent.location.href = url;
         return new Promise(resolve => setTimeout(resolve, 30 * 1000));
     }
 
@@ -244,12 +244,18 @@ window.loadApp = (() => { // 按顺序加载应用
     	else if(isTopWindow) {
         	mlog("registerServiceWorker ......");
         	await serviceWorker.registerServiceWorker();
+    	}
+    	
+    	if (navigator.serviceWorker.controller) {
         	mlog("refreshVersionInfos ......");
         	await upData.refreshVersionInfos();
     	}
         
         mlog(`loading ${fullscreenEnabled ? "fullscreenUI" : "mainUI"}......`);
         await loadSources(uiSources);
+        
+        !isTopWindow && window.parent.fullscreenUI.viewport.resize();
+    	!isTopWindow && setTimeout(() => vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && window.parent.fullscreenUI.viewport.userScalable(), 1500);
         
         if ("fullscreenUI" in self) {
         	mlog(`fullscreenUI.src = ${window.location.href}`, "warn")
@@ -270,27 +276,17 @@ window.loadApp = (() => { // 按顺序加载应用
         const str = upData.logUpDataCompleted();
     	if (str) { //更新已经完成，弹窗提示
     		upData.saveAppVersion(upData.currentVersion);
-        	str.indexOf(`\n`) == -1 ? warn(str) : msg({
-                	text: str,
-                	butNum: 1,
-                	lineNum: 10,
-                	textAlign: "left",
-                	enterTXT: "关闭",
-                	callEnter: () => {},
-                	callCancel: () => { window.open("./help/renjuhelp/versionHistory.html", "helpWindow") }
-        	})
+        	warn("摆棋小工具更新完成")
         }
         
-        console.info(`logCaches`)
         const logCaches = !fullscreenEnabled && (window.vConsole || window.parent.vConsole) && (await upData.logCaches(Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])));
-        console.info(logCaches);
-        //console.info(upData.logVersions());
+        logCaches && console.info(upData.logVersions());
+        logCaches && console.info(logCaches);
         
     	vconsoleSwitch == openVconsoleSwitch.LAST_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
     	serviceWorker.postMessage({cmd: "postDelayMessages"});
     	
-        vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && !fullscreenEnabled && mainUI.viewport.userScalable();
-        
+    	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && !fullscreenEnabled && mainUI.viewport.userScalable()
         //window["mainUI"] && upData.searchUpdate();
     	
     }catch(err) {

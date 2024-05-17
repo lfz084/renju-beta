@@ -1,11 +1,11 @@
 window.RenjuLib = (() => {
     "use strict";
     
-    const TEST_RENLIB = false;
+    const DEBUG_RENLIB = false;
 
     function log(param, type = "log") {
         const  print = console[type] || console.log;
-        TEST_RENLIB && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js] ${ param}`);
+        DEBUG_RENLIB && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[RenjuLib.js] ${ param}`);
     }
 
     let url = "./ReadLib/script/RenjuLib_worker.js",

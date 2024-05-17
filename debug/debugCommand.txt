@@ -435,3 +435,5 @@ console.log(s)
     
     caches.open("currentCache").then(cache=>cache.matchAll()).then(responses =>responses.map(response => response.url)).then(console.log)
         			})
+        			
+    ("<br><br>as<br>\nas<bR>\n<br>").replace(/^(\<br\>|\n)+|(\<br\>|\n)+$/ig, 556)

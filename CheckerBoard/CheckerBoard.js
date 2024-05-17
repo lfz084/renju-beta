@@ -1,10 +1,10 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23118";
+if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23187";
 (function(global, factory) {
     (global = global || self, factory(global));
 }(this, (function(exports) {
     'use strict';
 
-    const TEST_CHECKER_BOARD = false;
+    const DEBUG_CHECKER_BOARD = false;
     const TYPE_EMPTY = 0;
     const TYPE_MARK = 1 << 4; // 标记
     const TYPE_MOVE = TYPE_MARK | 1; //VCF手顺
@@ -62,7 +62,7 @@ if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23118";
 
     function log(param, type = "log") {
         const print = console[type] || console.log;
-        TEST_CHECKER_BOARD && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js] ${ param}`);
+        DEBUG_CHECKER_BOARD && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[CheckerBoard.js] ${ param}`);
     }
 
     //------------------------ loadFont ------------------

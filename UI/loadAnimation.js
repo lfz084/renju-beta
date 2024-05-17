@@ -1,11 +1,11 @@
 'use strict';
 // loaders.css
 window.loadAnimation = (function() { //控制加载动画
-	const TEST_LOADANIMA = false;
+	const DEBUG_LOADANIMA = false;
 	
 	function log(param, type = "log") {
 		const print = console[type] || console.log;
-		TEST_LOADANIMA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[loadAnimation.js]  ${ param}`);
+		DEBUG_LOADANIMA && window.DEBUG && (window.vConsole || window.parent.vConsole) && print(`[loadAnimation.js]  ${ param}`);
 	}
 	
 	//--------------------------------------------------------------------------

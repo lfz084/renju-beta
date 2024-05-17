@@ -1,7 +1,7 @@
 window.serviceWorker = window.parent.serviceWorker || (() => {
     "use strict";
 
-    const TEST_SERVER_WORKER = true;
+    const DEBUG_SERVER_WORKER = false;
     const scriptURL = './sw.js';
     let serviceWorker_state;
     
@@ -22,7 +22,7 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     		console.error(data.msg)
     	},
     	copyToCurrentCache: async (data) => {
-    		const up = await upData.searchUpdate();
+    		const up = upData.isCheckVersion() && (await upData.searchUpdate());
     		if (up && up.action == "copyToCurrentCache") {
     			const msg = window.msg || window["fullscreenUI"] && fullscreenUI.contentWindow.msg;
     			const title = up.title + up.warn;
@@ -59,11 +59,13 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     	if (new RegExp("^load finish|^loading\.\.\.").test(event.data.toString())) {
     		return;
     	}
-    	else if (typeof event.data == "object" && COMMAND[event.data.cmd]) {
-    		COMMAND[event.data.cmd](event.data);
+    	else if (typeof event.data == "object" && event.data.cmd) {
+    		if (event.data.time) return;
+    		else if(typeof COMMAND[event.data.cmd] == "function") COMMAND[event.data.cmd](event.data);
+    		else console.error(`serviceWorker message: command "${event.data.cmd}" is not function`)
     	}
     	else {
-    		TEST_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker message: ${JSON.stringify(event.data).slice(0,200)}`);
+    		DEBUG_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker message: ${JSON.stringify(event.data).slice(0,200)}`);
     	}
     }
     
@@ -193,16 +195,15 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
                     .then(registrations => {
                         registrations.map(registration => {
                             if (window.location.href.indexOf(registration.scope) + 1) {
-                                ps.push(registration.update());
+                            	ps.push(registration.update());
                                 callback(registration)
                             }
                         })
                     })
                     .then(() => Promise.all(ps))
-                	.then(() => resolve(ps[0]))
-                    .catch(() => {
-                        resolve();
-                    })
+                	.then(() => ps[0])
+                	.then(() => resolve())
+                    .catch(() =>resolve())
             }
             else resolve()
         })
