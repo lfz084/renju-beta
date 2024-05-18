@@ -1284,7 +1284,6 @@ window.control = (() => {
 				return true;
 			}
 			else if (msgStr.indexOf("color==") > -1) {
-
 				let st = msgStr.indexOf("color==");
 				let color = Number(msgStr.slice(st + 7, st + 8));
 				st = msgStr.indexOf("[");
@@ -1305,18 +1304,22 @@ window.control = (() => {
 				}
 			}
 			else if (msgStr.indexOf("debug") > -1) {
-				window.parent.openVconsole(true).then(v => vConsole = v)
+				const cmd = /debug[\s]*\=[\s]*[1-9]|debug/i.exec(msgStr);
+				const debugSwith = /[1-9]/.exec(cmd) * 1 || true;
+				window.parent.openVconsole(debugSwith)
 				return;
 			}
 			else if (msgStr.indexOf("close") > -1) {
-				vConsole && (vConsole = window.parent.closeVconsole());
+				window.parent.closeVconsole();
 				return;
 			}
 			else if (msgStr.indexOf("showSwitch") > -1) {
+				vConsole = vConsole || window.parent.vConsole();
 				vConsole && vConsole.showSwitch();
 				return;
 			}
 			else if (msgStr.indexOf("hideSwitch") > -1) {
+				vConsole = vConsole || window.parent.vConsole();
 				vConsole && vConsole.hideSwitch();
 				return;
 			}

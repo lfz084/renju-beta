@@ -80,7 +80,7 @@ function loadEvaluatorWebassembly() {
                 }
             };
 
-        fetch(url.split("?")[0] + "?v=" + new Date().getTime())
+        fetch(url.split("?")[0].split("#")[0] + "?v=" + new Date().getTime())
             .then(response => {
                 return response.arrayBuffer()
             })

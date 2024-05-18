@@ -20,6 +20,9 @@
     let currentVersionInfo = null;
     let lastRefreshTime = new Date().getTime();
     let createTime;
+    let currentClient;
+    
+	self.clients.matchAll().then(clients => currentClient = clients.filter(c=>c))
     
     //------------------------------- Response --------------------------------
     
@@ -190,12 +193,12 @@
     /**
      * 测试缓存是否完整
      */
-    async function checkCache(cacheKey) {
+    async function checkCache(client, cacheKey) {
     	let count = 0;
     	const ps = [];
     	const info = cacheKey == "currentCache" ? currentVersionInfo : updateVersionInfo;
     	const urls = Object.keys(info.files).map(key => info.files[key]).map(url => formatURL(url));
-    	urls.map(url => ps.push(loadCache(url, cacheKey + beta).then(response => response.ok && count++)));
+    	urls.map(url => ps.push(loadCache(url, cacheKey + beta, client).then(response => response.ok && count++)));
     	return Promise.all(ps).then(() => count == urls.length)
     }
     
@@ -225,14 +228,14 @@
     /**
      * 下载所有离线文件保存到缓存中
      */
-    async function updateFiles(cacheKey, versionInfo) {
+    async function updateFiles(cacheKey, versionInfo, client) {
     	versionInfo["status"] = CacheStatus.UPDATING;
-    	postMsg({cmd: "log", msg: `updating ${cacheKey}: ${Object.keys(versionInfo["files"]).length} files......`});
+    	postMsg({cmd: "log", msg: `updating ${cacheKey}: ${Object.keys(versionInfo["files"]).length} files......`}, client);
     	return new Promise(resolve => {
     		async function updateFile() {
     			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
     				const url = formatURL(new Request(files.shift()).url);
-    				return cacheFirst(url, cacheKey)
+    				return cacheFirst(url, cacheKey, client)
     					.then(response => {
     						response.ok && countCacheFiles++;
     						updateFile()
@@ -248,7 +251,7 @@
     		updateFile()
     	})
     	.then(updated => versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE))
-    	.then(status => (postMsg({cmd: "log", msg: `files ${status == CacheStatus.UPDATED  ? "updated" : "fout"}`}), status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"})))
+    	.then(status => (postMsg({cmd: "log", msg: `files ${status == CacheStatus.UPDATED  ? "updated" : "fout"}`}, client), status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}, client)))
     }
     
     /**
@@ -293,7 +296,7 @@
     			}
     		})
     		.then(({cacheKey, versionInfo}) => versionInfo["status"] == CacheStatus.UPDATED ? Promise.reject(`${cacheKey} 已经缓存完成，跳过后续更新`) : {cacheKey, versionInfo})
-    		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo))
+    		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo, client))
     		.then(() => {
     			lastRefreshTime = new Date().getTime() + refreshVersionInterval;
 				return caches.setItem("lastRefreshTime", lastRefreshTime)
@@ -303,7 +306,7 @@
     	return waitingUpdateCache;
     }
     
-    async function stopUpdating() {
+    async function stopUpdating(client) {
     	return new Promise(resolve => {
     		currentVersionInfo["status"] == CacheStatus.UPDATING && (currentVersionInfo["status"] = CacheStatus.STOPING);
     		updateVersionInfo["status"] == CacheStatus.UPDATING && (updateVersionInfo["status"] = CacheStatus.STOPING);
@@ -518,6 +521,7 @@
 	}
 	
 	function syncMsg(msg, client) {
+		client = client || currentClient;
 		if (client && typeof client.postMessage == "function") {
 			client.postMessage(msg);
 		}
@@ -572,7 +576,7 @@
 			return refreshVersionInfos(client).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
 		},
 		checkCache: async (data, client) => {
-			return checkCache(...getArgs(data)).then(rt => data["resolve"] = rt)
+			return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
 		},
 		copyToCurrentCache: async (data, client) => {
 		 	return copyToCurrentCache(client).then(() => data["resolve"] = true).catch(() => data["resolve"] = false)
@@ -600,8 +604,9 @@
     	cmd: "log",
     	msg: `----- serviceWorker reboot -----\n\ttime: ${new Date().getTime()} \n\tScriptURL: ${new Request("./sw.js").url} \n\tScript Version: ${SCRIPT_VERSION} \n\tcache Version: ${currentCacheKey}`
     });
-    waitCacheReady();
-    loadUpdateVersionInfo();
+    
+    waitCacheReady(currentClient);
+    loadUpdateVersionInfo(currentClient);
     caches.getItem("lastRefreshTime").then(v => lastRefreshTime = (v && v * 1 || 0))
     caches.getItem("createTime").then(v => v * 1 ? (createTime = v * 1) : (createTime = new Date().getTime(), caches.setItem("createTime", createTime)))
 				

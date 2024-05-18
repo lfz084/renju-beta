@@ -398,7 +398,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     function formatURL(url, version) {
-    	url = (absoluteURL(url).split("?")[0]).split("#")[0];
+    	url = absoluteURL(url).split("?")[0].split("#")[0];
     	const URL_VERSION = "";//getUrlVersion(version);
     	const indexHtml = url.split("/").pop().indexOf(".") == -1 ? (url.slice(-1) == "/" ? "" : "/") + "index.html" : "";
     	return url + indexHtml + URL_VERSION
@@ -432,7 +432,7 @@ window.upData = window.parent.upData || (function() {
     
     async function downloadToCache(url, cache) {
     	try{
-			const response = await fetch(new Request(url.split("?")[0] + "?v=" + new Date().getTime(), requestInit));
+			const response = await fetch(new Request(url.split("?")[0].split("#")[0] + "?v=" + new Date().getTime(), requestInit));
     		if (response.ok) {
     			await putCache(cache, url, response);
     			return await loadCache(cache, url)

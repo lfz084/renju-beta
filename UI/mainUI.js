@@ -524,7 +524,7 @@ window.mainUI = (function() {
 	//----------------------------- homeButton ---------------------------------
 	let btnBoard;
 	let themeNames;
-	if (window.parent && !window.parent.fullscreenUI) {
+	if (window.top && !window.top.fullscreenUI) {
 		const svgRefresh = "./UI/theme/light/arrow-cw-svgrepo-com.svg";
 		const svgTuya = "./UI/theme/light/pen-tool-svgrepo-com.svg";
 		
