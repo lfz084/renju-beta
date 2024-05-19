@@ -1,5 +1,5 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23188";
+self.SCRIPT_VERSIONS["renju"] = "v2024.23189";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
@@ -124,7 +124,8 @@ window.loadApp = (() => { // 按顺序加载应用
     			window.location.href = "upData.html";
     		}
     		else {
-    			window.mlog && mlog("准备刷新页面...")
+    			window.mlog && mlog("准备刷新页面...");
+    			window.loadAnimation && loadAnimation.text("准备刷新页面...");
     			window.reloadApp && window.reloadApp() || window.top.location.reload();
     		}
     	}

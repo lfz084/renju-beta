@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.23188";
+    const scriptVersion = "v2024.23189";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -205,9 +205,9 @@ window.upData = window.parent.upData || (function() {
     }
     
     function saveAppVersion(version) {
-    	("caches" in window) && caches.setItem(keyRenjuVersion, version);
-    	localStorage.setItem(keyRenjuVersion, version);
     	localStorage.removeItem("delayCheckVersion");
+    	localStorage.setItem(keyRenjuVersion, version);
+    	try {("caches" in window) && caches.setItem(keyRenjuVersion, version)}catch(e){console.log};
     }
     
     async function refreshVersionInfos() {

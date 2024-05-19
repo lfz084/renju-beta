@@ -1,5 +1,5 @@
-    const DEBUG_SERVER_WORKER = false;
-    const SCRIPT_VERSION = "v2024.23188";
+    const DEBUG_SERVER_WORKER = true;
+    const SCRIPT_VERSION = "v2024.23189";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -215,7 +215,7 @@
     		.then(([currentCache, updataCache]) => {
     			const ps = [];
     			updataCache.matchAll().then(responses => {
-    				responses.map(response => ps.push(currentCache.put(formatURL(response.url), response)))
+    				responses.map(response => ps.push(currentCache.put(new Request(formatURL(response.url), requestInit), response)))
     			})
     			return Promise.all(ps);
     		})
@@ -235,7 +235,7 @@
     		async function updateFile() {
     			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
     				const url = formatURL(new Request(files.shift()).url);
-    				return cacheFirst(url, cacheKey, client)
+    				return cacheFirst(url, cacheKey)/* 不要client参数，onlyNet不开加载动画*/
     					.then(response => {
     						response.ok && countCacheFiles++;
     						updateFile()
