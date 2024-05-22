@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.23223";
+    const scriptVersion = "v2024.25001";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -489,6 +489,11 @@ window.upData = window.parent.upData || (function() {
     	window.loadAnimation && (loadAnimation.lock(false),loadAnimation.close());
     	return errUrls.length;
     }
+    
+    async function updateCache() {
+    	if(!checkServiceWorkerAndCaches()) return;
+    	return serviceWorker.postMessage({ cmd: "updateCache" }, 300 * 1000)
+    }
 
     return {
         get ping() { return ping },
@@ -507,10 +512,10 @@ window.upData = window.parent.upData || (function() {
         get removeAppCache() { return removeAppCache },
         get removeOldAppCache() { return removeOldAppCache },
         get resetAndUpData() { return resetAndUpData },
-        get autoUpData() { return autoUpData },
         get searchUpdate() { return searchUpdate },
         get resetApp() { return resetApp },
         get fetchTXT() { return fetchTXT },
+        get updateCache() { return updateCache },
         get saveCacheFiles() { return saveCacheFiles },
         get copyToCurrentCache() { return copyToCurrentCache },
         

@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.23223";
+    const SCRIPT_VERSION = "v2024.25001";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -240,10 +240,9 @@
     /**
      * 下载所有离线文件保存到缓存中
      */
-    async function updateFiles(cacheKey, versionInfo, client) {
-    	versionInfo["status"] = CacheStatus.UPDATING;
-    	postMsg({cmd: "log", msg: `updating ${cacheKey}: ${Object.keys(versionInfo["files"]).length} files......`}, client);
-    	return new Promise(resolve => {
+    var waitingUpdateFiles;
+    async function updateFiles(cacheKey, versionInfo, client, progress=()=>{}) {
+    	waitingUpdateFiles = waitingUpdateFiles || new Promise(resolve => {
     		async function updateFile() {
     			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
     				const item = files.shift();
@@ -274,6 +273,7 @@
     					.then(response => !response.ok ? fetchAndPutCache(url, cacheKey) : response)
     					.then(response => {
     						response.ok && countCacheFiles++;
+    						progress(countCacheFiles/numAllFiles)
     						updateFile()
     					})
     			}
@@ -284,11 +284,19 @@
     		const files = Object.keys(versionInfo["files"]).map(key=>({key: key, url: versionInfo["files"][key]}));
     		const numAllFiles = files.length;
     		let countCacheFiles = 0;
+    		versionInfo["status"] = CacheStatus.UPDATING;
+    		postMsg({cmd: "log", msg: `updating ${cacheKey}: ${versionInfo.version} ${Object.keys(versionInfo["files"]).length} files......`}, client);
     		updateFile()
     	})
     	.then(updated => updated && checkCache(client, cacheKey))
-    	.then(updated => versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE))
-    	.then(status => (postMsg({cmd: "log", msg: `files ${status == CacheStatus.UPDATED  ? "updated" : "fout"}`}, client), status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}, client)))
+    	.then(updated => {
+    		versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE);
+    		postMsg({cmd: "log", msg: `files ${updated ? "updated" : "fout"}`}, client);
+    		updated && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}, client);
+    		waitingUpdateFiles = undefined;
+    		return updated;
+    	})
+    	return waitingUpdateFiles;
     }
     
     /**
@@ -314,7 +322,7 @@
      * 联网刷新版本信息，成功后缓存离线资源，新版本缓存完成后通知用户
      */
     var waitingUpdateCache = undefined;
-    async function updateCache(client) {
+    async function updateCache(client, progress=()=>{}) {
     	const url = formatURL(VERSION_JSON);
     	waitingUpdateCache = waitingUpdateCache || Promise.resolve()
     		.then(() => (postMsg({cmd: "log", msg: "updating......"}, client), updateStatus = CacheStatus.UPDATING))
@@ -329,18 +337,18 @@
     			}
     			else {
     				return Promise.resolve()
-						.then(() => (oldInfo["files"]={}, Object.assign(oldInfo["files"], newInfo["files"])))
+						.then(() => (oldInfo["files"]={}, Object.assign(oldInfo["files"], newInfo["files"]), oldInfo["md5"]={}, Object.assign(oldInfo["md5"], newInfo["md5"])))
     					.then(() => ({versionInfo: oldInfo, cacheKey}))
     			}
     		})
     		.then(({cacheKey, versionInfo}) => versionInfo["status"] == CacheStatus.UPDATED ? Promise.reject(`${cacheKey} 已经缓存完成，跳过后续更新`) : {cacheKey, versionInfo})
-    		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo, client))
-    		.then(() => {
+    		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo, client, progress))
+    		.then(updated => {
     			lastRefreshTime = new Date().getTime() + refreshVersionInterval;
-				return localCache.setItem("lastRefreshTime", lastRefreshTime)
+				return localCache.setItem("lastRefreshTime", lastRefreshTime).then(()=>updated)
 			})
     		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || e }, client))
-    		.then(() => (updateStatus = CacheStatus.UPDATE, waitingUpdateCache = undefined))
+    		.then(updated => (updateStatus = CacheStatus.UPDATE, waitingUpdateCache = undefined, updated))
     	return waitingUpdateCache;
     }
     
@@ -615,6 +623,12 @@
 		refreshVersionInfos: async (data, client) => {
 			return refreshVersionInfos(client).then(() => data["resolve"] = {currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo})
 		},
+		updateCache: async (data, client) => {
+		 	function progress(p) {
+				postMsg({cmd: "progress", msg: {"progress": p}}, client)
+			}
+			return updateCache(client, progress).then(rt => data["resolve"] = rt)
+		 },
 		checkCache: async (data, client) => {
 			return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
 		},

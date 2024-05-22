@@ -69,11 +69,11 @@
     	upData.resetUpdataVersion()
     	await removeCaches()
     	await serviceWorker.postMessage({cmd: "waitCacheReady"})
-    	await updateCache()
+    	await saveCacheFiles()
     	toIndex()
     }
     
-    async function updateCache() {
+    async function saveCacheFiles() {
     	log("<br>");
     	const files = (await loadJSON("Version/SOURCE_FILES.json")).files;
     	const urls = Object.keys(files).map(key => files[key]);
@@ -82,7 +82,12 @@
     	log(`缓存结束,${errCount}个文件错误<br>`)
     }
     
-    async function 
+    async function updateCache() {
+    	log("<br>");
+    	const done = await upData.updateCache();
+    	log(`${done?"缓存结束":"缓存失败"}<br>`)
+    	return done;
+    }
     
     async function copyToCurrentCache() {
     	log("<br>");
@@ -100,7 +105,7 @@
 			if (up.action) {
 				async function onclick() {
 					btn.removeEventListener("click", onclick, true);
-					up.action == "copyToCurrentCache" ? (await checkLink() && copyToCurrentCache()) : up.action == "updateCache" ? (await checkLink() && updateCache()) : (await checkLink() && upDataApp());
+					up.action == "copyToCurrentCache" ? (await checkLink() && copyToCurrentCache()) : up.action == "updateCache" ? (await checkLink() && updateCache()) : (await checkLink() && updateCache().then(done=>done&&copyToCurrentCache()));
 				}
 				const logDiv = $("log");
 				const btn = document.createElement("a");

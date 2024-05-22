@@ -115,6 +115,11 @@ window.loadAnimation = (function() { //控制加载动画
             loadAnimation.close();
         }
     }
+    else if (event.data.cmd && event.data.cmd == "progress") {
+    	const progress = event.data.msg.progress;
+    	loadAnimation.text(~~(progress*1000)/10 + "%");
+    	progress < 1 ? loadAnimation.open() : loadAnimation.close();
+    }
 })
 
 if (window != window.top) {

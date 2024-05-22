@@ -62,10 +62,10 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     	else if (typeof event.data == "object" && event.data.cmd) {
     		if (event.data.time) return;
     		else if(typeof COMMAND[event.data.cmd] == "function") COMMAND[event.data.cmd](event.data);
-    		else console.error(`serviceWorker message: command "${event.data.cmd}" is not function`)
+    		else console.error(`serviceWorker.js: command "${event.data.cmd}" is not function`)
     	}
     	else {
-    		DEBUG_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker message: ${JSON.stringify(event.data).slice(0,200)}`);
+    		DEBUG_SERVER_WORKER && window.DEBUG && (window.vConsole || window.parent.vConsole) && console.info(`serviceWorker.js: ${JSON.stringify(event.data).slice(0,200)}`);
     	}
     }
     
