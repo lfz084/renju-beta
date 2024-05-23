@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.25005";
+    const SCRIPT_VERSION = "v2024.25006";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -631,8 +631,11 @@
 			return updateCache(client, progress).then(rt => data["resolve"] = rt)
 		 },
 		checkCache: async (data, client) => {
-			return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
-		},
+		 	return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
+		 },
+		copyCache: async (data, client) => {
+		 	return copyCache(...getArgs(data)).then(rt => data["resolve"] = rt)
+		 },
 		copyToCurrentCache: async (data, client) => {
 		 	return copyToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
 		},

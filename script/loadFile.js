@@ -132,7 +132,7 @@
                             function _timeout() {
                                 reject(`Error: 连接网络超时\n文件"${fileName}"下载失败`);
                             }
-                            setTimeout(_timeout, 60 * 1000);
+                            setTimeout(_timeout, 300 * 1000);
                             loadFun(fileName)
                                 .then(resolve)
                                 .catch(e=>reject(e && e.stack || e))
