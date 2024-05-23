@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.25001";
+    const SCRIPT_VERSION = "v2024.25002";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -537,7 +537,7 @@
     					.then(response => addHTMLCode(response));
     			})
     			.catch(err => {
-    				return new Response(err ? JSON.stringify(err, null, 2) : response_err_data, response_404_init_data)
+    				return new Response(err ? JSON.stringify(err && err.stack || err, null, 2) : response_err_data, response_404_init_data)
     			})
     			
     		event.respondWith(responsePromise);

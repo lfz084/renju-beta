@@ -1,6 +1,7 @@
 window.SCRIPT_VERSIONS = [];
 //self.SCRIPT_VERSIONS["renju"] = "2024.23206";
 window.loadApp = (() => { // 按顺序加载应用
+try{
     "use strict";
     window.DEBUG = true;
     const DEBUG_LOADAPP = true;
@@ -140,7 +141,7 @@ window.loadApp = (() => { // 按顺序加载应用
         BUT && BUT.remove();
         window.mlog = undefined;
     }
-
+    
     window.mlog = (function() {
         let timer;
         return function(message, type = "log") {
@@ -311,4 +312,5 @@ window.loadApp = (() => { // 按顺序加载应用
         localStorage.removeItem("reloadCount");
     }catch(err) { onerror(err)}
     }
+}catch(err) { location.href = "upData.html" }
 })()
