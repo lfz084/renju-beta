@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.25003";
+    const SCRIPT_VERSION = "v2024.25005";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -215,7 +215,7 @@
     			})
     		})
     		.then(() => true)
-    		.catch(() => false)
+    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}), false))
     }
     
     /**
@@ -228,11 +228,12 @@
     		.then(() => resetCache(currentCacheKey, updateVersionInfo))
     		.then(info => currentVersionInfo = info)
     		.then(() => copyCache(currentCacheKey, updataCacheKey))
-    		.then(() => checkCache(client, currentCacheKey))
+    		.then(done => done && checkCache(client, currentCacheKey))
     		.then(done => {
     			done && caches.delete(updataCacheKey);
     			postMsg({cmd: "log", msg: `copyToCurrentCache ${done?"done":"error"}`}, client);
-    			waitingCopyToCurrentCache = undefined
+    			waitingCopyToCurrentCache = undefined;
+    			return done;
     		})
     	return waitingCopyToCurrentCache;
     }
@@ -633,7 +634,7 @@
 			return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
 		},
 		copyToCurrentCache: async (data, client) => {
-		 	return copyToCurrentCache(client).then(() => data["resolve"] = true).catch(() => data["resolve"] = false)
+		 	return copyToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
 		},
 	}
     
