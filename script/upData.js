@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.25002";
+    const scriptVersion = "v2024.25003";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -210,7 +210,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     async function refreshVersionInfos() {
-    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 8000)
+    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 60 * 1000)
     		.then(({ currentVersionInfo, updateVersionInfo }) => {
     			currentVersion = currentVersionInfo && currentVersionInfo.version;
     			updateVersion = updateVersionInfo && updateVersionInfo.version;
@@ -290,8 +290,9 @@ window.upData = window.parent.upData || (function() {
     	await serviceWorker.updateServiceWorker();
     	resetUpdataVersion(); 
     	return checkLink()
-    		.then(online => online && serviceWorker.postMessage({cmd: "copyToCurrentCache"}))
-    		.then(() => { 
+    		.then(online => online && serviceWorker.postMessage({cmd: "copyToCurrentCache"}, 60 * 1000))
+    		.then(done => { 
+    			if (!done) return;
     			/*延迟刷新，避开 Firefox serviceWorker fetch event respondWith bug*/
     			setTimeout(()=>window.reloadApp(), 3000);
     			(window.warn || window["fullscreenUI"] && fullscreenUI.contentWindow.warn || alert)("更新完成，3秒后刷新");
@@ -332,16 +333,16 @@ window.upData = window.parent.upData || (function() {
     		const rt = { title: "", warn: "", action: "", actionLabel: "", fun: () => {} };
     		const info = await fetchInfo("Version/UPDATA_INFO.json");
     		const version = await getUpDataVersion();
-    		const { updateVersionInfo } = await serviceWorker.postMessage({ cmd: "getVersionInfos" });
+    		const { updateVersionInfo } = await serviceWorker.postMessage({ cmd: "getVersionInfos" }, 5000);
     		if (version.isNewVersion) {
-    			const Cached = updateVersionInfo && updateVersionInfo.version == version.version && await serviceWorker.postMessage({ cmd: "checkCache", arg: "updataCache" });
+    			const Cached = updateVersionInfo && updateVersionInfo.version == version.version && await serviceWorker.postMessage({ cmd: "checkCache", arg: "updataCache" }, 30 * 1000);
     			rt.title = `${Cached && "新版本已下载完成" || "发现新版本"} ${version.version}` + upData.logVersionInfo(version.version, info) + "\n";
     			rt.warn = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
     			rt.action = Cached ? "copyToCurrentCache" : "update";
     			rt.actionLabel = Cached ? "缓存" : "更新";
     		}
     		else {
-    			const ck = await serviceWorker.postMessage({ cmd: "checkCache", arg: "currentCache" })
+    			const ck = await serviceWorker.postMessage({ cmd: "checkCache", arg: "currentCache" }, 30 * 1000)
     			if (!ck) {
     				rt.title = `当前版本离线缓存不完整，你可以点击缓存\n`;
     				rt.action = "updateCache";

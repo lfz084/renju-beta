@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.25002";
+    const SCRIPT_VERSION = "v2024.25003";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;

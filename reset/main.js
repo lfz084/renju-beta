@@ -68,7 +68,7 @@
     	await updateServiceWorker()
     	upData.resetUpdataVersion()
     	await removeCaches()
-    	await serviceWorker.postMessage({cmd: "waitCacheReady"})
+    	await serviceWorker.postMessage({cmd: "waitCacheReady"}, 60 * 1000)
     	await saveCacheFiles()
     	toIndex()
     }
@@ -77,7 +77,7 @@
     	log("<br>");
     	const files = (await loadJSON("Version/SOURCE_FILES.json")).files;
     	const urls = Object.keys(files).map(key => files[key]);
-    	const { currentCacheKey } = await serviceWorker.postMessage({cmd: "getCacheKeys"});
+    	const { currentCacheKey } = await serviceWorker.postMessage({cmd: "getCacheKeys"}, 5000);
     	const errCount = await upData.saveCacheFiles(urls, currentCacheKey);
     	log(`缓存结束,${errCount}个文件错误<br>`)
     }
@@ -93,7 +93,7 @@
     	log("<br>");
     	await updateServiceWorker();
     	upData.resetUpdataVersion();
-    	await serviceWorker.postMessage({cmd: "copyToCurrentCache"}).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`))
+    	await serviceWorker.postMessage({cmd: "copyToCurrentCache"}, 60 * 1000).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`))
     	toIndex()
     }
     
