@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.25009";
+    const scriptVersion = "v2024.25011";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -218,7 +218,7 @@
     	const paramQueue = urls.map(url => [url, cacheKey, client]) || [];
     	return queue((url, cacheKey, client) => loadCache(url, cacheKey, client).then(response => response.ok && count++), paramQueue)
     		.then(() => count == urls.length)
-    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}), false))
+    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}, client), false))
     }
     
     /**
@@ -285,16 +285,16 @@
     							return loadCache(url, tempCacheKey)
     								.then(response => {
     									if (response.ok) {
-    										postMsg(`updateFiles copy ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
+    										postMsg(`updateFiles copy ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`, client)
     										return putCache(cacheKey, new Request(url, requestInit), response)
     									}
-    									postMsg(`updateFiles fetch ${decodeURIComponent(url)}`)
+    									postMsg(`updateFiles fetch ${decodeURIComponent(url)}`, client)
     									return response;
     								})
     						}
     						else {
-    							response.ok && postMsg(`updateFiles load ${cacheKey} ${decodeURIComponent(url)}`)
-    							!response.ok && postMsg(`updateFiles fetch ${decodeURIComponent(url)}`)
+    							response.ok && postMsg(`updateFiles load ${cacheKey} ${decodeURIComponent(url)}`, client)
+    							!response.ok && postMsg(`updateFiles fetch ${decodeURIComponent(url)}`, client)
     							return response;
     						}
     					})
@@ -310,7 +310,7 @@
     	.then(updated => {
     		versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE);
     		postMsg({cmd: "log", msg: `files ${updated ? "updated" : "fout"}`}, client);
-    		updated && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}, client);
+    		updated && cacheKey == updataCacheKey && !updateFilesProgress && postMsg({cmd: "copyToCurrentCache"}, client);
     		waitingUpdateFiles = undefined;
     		updateFilesProgress = undefined;
     		return updated;
@@ -325,7 +325,7 @@
     function tryUpdate(client) {
     	waitingTryUpdate = waitingTryUpdate || Promise.resolve()
     		.then(() => {
-    			postMsg({cmd: "log", msg: `tryUpdate ${createTime} && ${firstUpdateCacheDelay < new Date().getTime() - createTime} && ${new Date().getTime() - lastRefreshTime > refreshVersionInterval}`})
+    			postMsg({cmd: "log", msg: `tryUpdate ${createTime} && ${firstUpdateCacheDelay < new Date().getTime() - createTime} && ${new Date().getTime() - lastRefreshTime > refreshVersionInterval}`}, client)
     			if (createTime &&
     				(firstUpdateCacheDelay < new Date().getTime() - createTime) &&
     				(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
