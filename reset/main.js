@@ -82,6 +82,8 @@
     	log(`缓存结束,${errCount}个文件错误<br>`)
     }
     
+    async function 
+    
     async function copyToCurrentCache() {
     	log("<br>");
     	await updateServiceWorker();

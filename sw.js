@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.23220";
+    const SCRIPT_VERSION = "v2024.23223";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -257,17 +257,17 @@
     							return loadCache(url, tempCacheKey)
     								.then(response => {
     									if (response.ok) {
-    										postMsg(`copy ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
+    										postMsg(`updateFiles copy ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
     										let cloneRes = response.clone();
     										return caches.open(cacheKey).then(cache => cache.put(new Request(url, requestInit), cloneRes)).then(()=>response)
     									}
-    									postMsg(`fetch ${decodeURIComponent(url)}`)
+    									postMsg(`updateFiles fetch ${decodeURIComponent(url)}`)
     									return response;
     								})
     						}
     						else {
-    							response.ok && postMsg(`load ${cacheKey} ${decodeURIComponent(url)}`)
-    							!response.ok && postMsg(`fetch ${decodeURIComponent(url)}`)
+    							response.ok && postMsg(`updateFiles load ${cacheKey} ${decodeURIComponent(url)}`)
+    							!response.ok && postMsg(`updateFiles fetch ${decodeURIComponent(url)}`)
     							return response;
     						}
     					})
@@ -298,6 +298,7 @@
     function tryUpdate(client) {
     	waitingTryUpdate = waitingTryUpdate || Promise.resolve()
     		.then(() => {
+    			postMsg({cmd: "log", msg: `tryUpdate ${createTime} && ${firstUpdateCacheDelay < new Date().getTime() - createTime} && ${new Date().getTime() - lastRefreshTime > refreshVersionInterval}`})
     			if (createTime &&
     				(firstUpdateCacheDelay < new Date().getTime() - createTime) &&
     				(new Date().getTime() - lastRefreshTime > refreshVersionInterval)
@@ -543,11 +544,12 @@
 	let lastDelayMessages = new Date().getTime();
 	let log2cacheTimer = setInterval(() => {
 		if (5000 < new Date().getTime() - lastDelayMessages) {
-			clearInterval(log2cacheTimer);
-			postDelayMessages();
 			/*预防 serviceWorker 意外重启，关闭加载动画*/
 			load.finish(url, currentClient);
 			tryUpdate(currentClient);
+			/*------------------------------------*/
+			clearInterval(log2cacheTimer);
+			postDelayMessages();
 		}
 	}, 1000)
 		
