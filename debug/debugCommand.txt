@@ -465,3 +465,37 @@ console.log(s)
 			.then(() => upData.logCaches())
 			.then(console.log)
 			.catch(console.error)
+			
+
+try{
+async function queue(fun, paramQueue = []) {
+    	return new Promise((resolve, reject) => {
+    		function next() {
+    			const args = Array.isArray(paramQueue[index++]) ? paramQueue[index++] : [paramQueue[index++]];
+    			if (index <= paramQueue.length) {
+    				Promise.resolve().then(() => fun(...args)).then(next).catch(reject)
+    			}
+    			else resolve()
+    		}
+    		let index = 0;
+    		next()
+    	})
+    }
+
+async function copyCache(targetCacheKey, sourceCacheKey) {
+    	return Promise.all([caches.open(targetCacheKey), caches.open(sourceCacheKey)])
+    		.then(([targetCache, sourceCache]) => {
+    			return sourceCache.keys().then(requests => {
+    				return queue(request => {
+    					console.log(request && request.url)
+    					return sourceCache.match(request).then(response => targetCache.put(request, response))
+    				}, requests)
+    			})
+    		})
+    		.then(() => true)
+    		.catch(e => console.error(e&&e.stack||e))
+    }
+    
+    
+copyCache("log","currentCache").then(console.log).catch(console.error)
+}catch(e){alert(e&&e.stack||e)}

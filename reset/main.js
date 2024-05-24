@@ -217,7 +217,7 @@
 	
 	const btnDiv = document.createElement("div");
 	Object.assign(btnDiv.style, divStyle);
-	mainUI.upDiv.appendChild(btnDiv);
+	mainUI.downDiv.appendChild(btnDiv);
 	btnSettkng.map(setting => {
 		new removeButton(btnDiv, setting.src, setting.title, setting.callback)
 	})
@@ -233,7 +233,7 @@
 		},
 		reset: function() { this.viewElem.setAttribute("class", "textarea") }
 	})
-	logDiv.move(mainUI.cmdPadding, mainUI.cmdPadding, undefined, undefined, downDiv);
+	logDiv.move(mainUI.cmdPadding, mainUI.cmdPadding, undefined, undefined, upDiv);
     
 	//------------------ load -----------------------------
 	checkLink().then(online => online && logNewVersion())

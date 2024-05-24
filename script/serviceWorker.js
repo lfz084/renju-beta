@@ -60,7 +60,7 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     		return;
     	}
     	else if (typeof event.data == "object" && event.data.cmd) {
-    		if (event.data.time) return;
+    		if (event.data.cmd == "progress" || event.data.time) return;
     		else if(typeof COMMAND[event.data.cmd] == "function") COMMAND[event.data.cmd](event.data);
     		else console.error(`serviceWorker.js: command "${event.data.cmd}" is not function`)
     	}

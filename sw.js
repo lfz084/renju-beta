@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.25006";
+    const scriptVersion = "v2024.25008";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -118,6 +118,23 @@
     //-------------------------- update Cache -----------------------------------
     
     /**
+     * 按 paramQueue 参数队列顺序执行 fun 函数
+     */
+    async function queue(fun, paramQueue = []) {
+    	return new Promise((resolve, reject) => {
+    		function next() {
+    			const args = Array.isArray(paramQueue[index]) ? paramQueue[index] : [paramQueue[index]];
+    			if (index++ < paramQueue.length) {
+    				Promise.resolve().then(() => fun(...args)).then(next).catch(e=>reject(e && e.stack || e))
+    			}
+    			else resolve()
+    		}
+    		let index = 0;
+    		next()
+    	})
+    }
+     
+     /**
      * 从 currentCache 读取版本信息，如果没有就尝试联网更新，更新成功就初始化 currentCache
      */
 	var waitingCacheReady = undefined;
@@ -195,12 +212,13 @@
      */
     async function checkCache(client, cacheKey) {
     	let count = 0;
-    	const ps = [];
     	const info = cacheKey.indexOf("currentCache")===0 ? currentVersionInfo : updateVersionInfo;
-    	const urls = Object.keys(info.files).map(key => info.files[key]).map(url => formatURL(url));
+    	const urls = Object.keys(info.files).map(key => info.files[key]).map(url => formatURL(url)) || [];
     	cacheKey = cacheKey.indexOf("currentCache")===0 ? currentCacheKey : updataCacheKey;
-    	urls.map(url => ps.push(loadCache(url, cacheKey, client).then(response => response.ok && count++)));
-    	return Promise.all(ps).then(() => count == urls.length)
+    	const paramQueue = urls.map(url => [url, cacheKey, client]) || [];
+    	return queue((url, cacheKey, client) => loadCache(url, cacheKey, client).then(response => response.ok && count++), paramQueue)
+    		.then(() => count == urls.length)
+    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}), false))
     }
     
     /**
@@ -209,10 +227,10 @@
     async function copyCache(targetCacheKey, sourceCacheKey) {
     	return Promise.all([caches.open(targetCacheKey), caches.open(sourceCacheKey)])
     		.then(([targetCache, sourceCache]) => {
-    			return sourceCache.keys().then(requests => {
-    				const ps = requests.map(request => sourceCache.match(request).then(response => targetCache.put(request, response)));
-    				return Promise.all(ps);
-    			})
+    			return sourceCache.keys().then(requests => queue(request => {
+    				postMsg(`copyCache ${sourceCacheKey} to ${targetCacheKey} url: ${decodeURIComponent(request && request.url)}`);
+    				return sourceCache.match(request).then(response => targetCache.put(request, response))
+    			}, requests))
     		})
     		.then(() => true)
     		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}), false))
@@ -242,11 +260,18 @@
      * 下载所有离线文件保存到缓存中
      */
     var waitingUpdateFiles;
-    async function updateFiles(cacheKey, versionInfo, client, progress=()=>{}) {
-    	waitingUpdateFiles = waitingUpdateFiles || new Promise(resolve => {
-    		async function updateFile() {
-    			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
-    				const item = files.shift();
+    var updateFilesProgress;
+    async function updateFiles(cacheKey, versionInfo, client, progress) {
+    	updateFilesProgress = updateFilesProgress || progress;
+    	waitingUpdateFiles = waitingUpdateFiles || Promise.resolve()
+    	.then(() => {
+    		const files = Object.keys(versionInfo["files"]).map(key=>({key: key, url: versionInfo["files"][key]}));
+    		const numAllFiles = files.length;
+    		let countCacheFiles = 0;
+    		versionInfo["status"] = CacheStatus.UPDATING;
+    		postMsg({cmd: "log", msg: `updating ${cacheKey}: ${versionInfo.version} ${Object.keys(versionInfo["files"]).length} files......`}, client);
+    		return queue(item => {
+    			if (versionInfo["status"] == CacheStatus.UPDATING) {
     				const key = item.key;
     				const url = formatURL(new Request(item.url).url);
     				return loadCache(url, cacheKey)/* 不要client参数，onlyNet不开加载动画*/
@@ -258,8 +283,7 @@
     								.then(response => {
     									if (response.ok) {
     										postMsg(`updateFiles copy ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
-    										let cloneRes = response.clone();
-    										return caches.open(cacheKey).then(cache => cache.put(new Request(url, requestInit), cloneRes)).then(()=>response)
+    										return putCache(cacheKey, new Request(url, requestInit), response)
     									}
     									postMsg(`updateFiles fetch ${decodeURIComponent(url)}`)
     									return response;
@@ -274,20 +298,10 @@
     					.then(response => !response.ok ? fetchAndPutCache(url, cacheKey) : response)
     					.then(response => {
     						response.ok && countCacheFiles++;
-    						progress(countCacheFiles/numAllFiles)
-    						updateFile()
+    						typeof updateFilesProgress === "function" && updateFilesProgress(countCacheFiles/numAllFiles)
     					})
     			}
-    			else {
-    				return resolve(countCacheFiles == numAllFiles);
-    			}
-    		}
-    		const files = Object.keys(versionInfo["files"]).map(key=>({key: key, url: versionInfo["files"][key]}));
-    		const numAllFiles = files.length;
-    		let countCacheFiles = 0;
-    		versionInfo["status"] = CacheStatus.UPDATING;
-    		postMsg({cmd: "log", msg: `updating ${cacheKey}: ${versionInfo.version} ${Object.keys(versionInfo["files"]).length} files......`}, client);
-    		updateFile()
+    		}, files).then(() => countCacheFiles == numAllFiles)
     	})
     	.then(updated => updated && checkCache(client, cacheKey))
     	.then(updated => {
@@ -295,6 +309,7 @@
     		postMsg({cmd: "log", msg: `files ${updated ? "updated" : "fout"}`}, client);
     		updated && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}, client);
     		waitingUpdateFiles = undefined;
+    		updateFilesProgress = undefined;
     		return updated;
     	})
     	return waitingUpdateFiles;
@@ -323,7 +338,7 @@
      * 联网刷新版本信息，成功后缓存离线资源，新版本缓存完成后通知用户
      */
     var waitingUpdateCache = undefined;
-    async function updateCache(client, progress=()=>{}) {
+    async function updateCache(client, progress) {
     	const url = formatURL(VERSION_JSON);
     	waitingUpdateCache = waitingUpdateCache || Promise.resolve()
     		.then(() => (postMsg({cmd: "log", msg: "updating......"}, client), updateStatus = CacheStatus.UPDATING))
@@ -403,6 +418,15 @@
     }
     
     /**
+     * 把 response 副本保存到缓存，成功后返回 response
+     */
+    function putCache(version, request, response) {
+    	return caches.open(version)
+    		.then(cache => cache.put(request, response.clone()))
+    		.then(()=>response)
+    }
+    
+    /**
      * 返回标记为404 错误的response, HTML 页面做特殊处理
      */
     function fetchError(err, url, version, client) {
@@ -434,8 +458,7 @@
     	return onlyNet(url, version, client)
     		.then(response => {
     			if (response.ok && url.indexOf("blob:http") == -1) {
-    				let cloneRes = response.clone();
-    				return caches.open(version).then(cache => cache.put(new Request(url, requestInit), cloneRes)).then(()=>response)
+    				return putCache(version, new Request(url, requestInit), response)
     			}
     			return response;
     		})
@@ -619,10 +642,10 @@
 			data["resolve"] = {currentCacheKey, updataCacheKey}
 		},
 		getVersionInfos: async (data, client) => {
-			data["resolve"] = {currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo}
+			data["resolve"] = {scriptVersion, currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo}
 		},
 		refreshVersionInfos: async (data, client) => {
-			return refreshVersionInfos(client).then(() => data["resolve"] = {currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo})
+			return refreshVersionInfos(client).then(() => data["resolve"] = {scriptVersion, currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo})
 		},
 		updateCache: async (data, client) => {
 		 	function progress(p) {
@@ -660,7 +683,7 @@
     
     postMsg({
     	cmd: "log",
-    	msg: `----- serviceWorker reboot -----\n\ttime: ${new Date().getTime()} \n\tScriptURL: ${new Request("./sw.js").url} \n\tScript Version: ${SCRIPT_VERSION} \n\tcache Version: ${currentCacheKey}`
+    	msg: `----- serviceWorker reboot -----\n\ttime: ${new Date().getTime()} \n\tScriptURL: ${new Request("./sw.js").url} \n\tScript Version: ${scriptVersion} \n\tcache Version: ${currentCacheKey}`
     });
     
     waitCacheReady(currentClient);

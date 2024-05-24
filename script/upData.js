@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.25006";
+    const scriptVersion = "v2024.25008";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -211,7 +211,8 @@ window.upData = window.parent.upData || (function() {
     
     async function refreshVersionInfos() {
     	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 60 * 1000)
-    		.then(({ currentVersionInfo, updateVersionInfo }) => {
+    		.then(({ scriptVersion, currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo }) => {
+    			console.log(`upData.js: \nscriptVersion: ${scriptVersion} \ncurrentCacheKey: ${currentCacheKey} \nupdataCacheKey: ${updataCacheKey}`);
     			currentVersion = currentVersionInfo && currentVersionInfo.version;
     			updateVersion = updateVersionInfo && updateVersionInfo.version;
     		})
