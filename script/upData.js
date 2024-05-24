@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.25008";
+    const scriptVersion = "v2024.25009";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -206,15 +206,16 @@ window.upData = window.parent.upData || (function() {
     function saveAppVersion(version) {
     	localStorage.removeItem("delayCheckVersion");
     	localStorage.setItem(keyRenjuVersion, version);
-    	try {("caches" in window) && localCache.setItem(keyRenjuVersion, version)}catch(e){console.log};
+    	try {("caches" in window) && localCache.setItem(keyRenjuVersion, version)}catch(e){console.error(e && e.stack || e)};
     }
     
     async function refreshVersionInfos() {
+    	const updataScriptVersion = scriptVersion;
     	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 60 * 1000)
     		.then(({ scriptVersion, currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo }) => {
-    			console.log(`upData.js: \nscriptVersion: ${scriptVersion} \ncurrentCacheKey: ${currentCacheKey} \nupdataCacheKey: ${updataCacheKey}`);
     			currentVersion = currentVersionInfo && currentVersionInfo.version;
     			updateVersion = updateVersionInfo && updateVersionInfo.version;
+    			console.log(`updata Version: ${updataScriptVersion} \nserviceWorker Version: ${scriptVersion} \ncurrentCacheKey: ${currentCacheKey} \nupdataCacheKey: ${updataCacheKey}`);
     		})
     }
     
