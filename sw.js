@@ -224,8 +224,9 @@
     /**
      * 复制 cache，成功返回 true，失败返回 false
      */
+    var waitingCopyCache;
     async function copyCache(targetCacheKey, sourceCacheKey) {
-    	return Promise.all([caches.open(targetCacheKey), caches.open(sourceCacheKey)])
+    	waitingCopyCache = waitingCopyCache || Promise.all([caches.open(targetCacheKey), caches.open(sourceCacheKey)])
     		.then(([targetCache, sourceCache]) => {
     			return sourceCache.keys().then(requests => queue(request => {
     				postMsg(`copyCache ${sourceCacheKey} to ${targetCacheKey} url: ${decodeURIComponent(request && request.url)}`);
@@ -234,6 +235,8 @@
     		})
     		.then(() => true)
     		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}), false))
+    		.then(done => (waitingCopyCache = undefined,done))
+    	return waitingCopyCache;
     }
     
     /**
@@ -657,10 +660,18 @@
 		 	return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
 		 },
 		copyCache: async (data, client) => {
-		 	return copyCache(...getArgs(data)).then(rt => data["resolve"] = rt)
+			if (waitingCopyCache) {
+				data["resolve"] = false;
+				postMsg({cmd: "error", msg: "copyCache is in progress......"}, client)
+			}
+			else return copyCache(...getArgs(data)).then(rt => data["resolve"] = rt)
 		 },
 		copyToCurrentCache: async (data, client) => {
-		 	return copyToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
+			if (waitingCopyToCurrentCache) {
+				data["resolve"] = false;
+				postMsg({cmd: "error", msg: "copyToCurrentCache is in progress......"}, client)
+			}
+			else return copyToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
 		},
 	}
     
