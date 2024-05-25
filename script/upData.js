@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.25";
+    const scriptVersion = "v2024.26001";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -355,40 +355,6 @@ window.upData = window.parent.upData || (function() {
     		return rt;
     	} catch (e) { alert(e.stack) }
     }
-    /*
-    async function searchUpdate() {
-    	try {
-    		if (isCheckVersion()) {
-    			const version = await getUpDataVersion();
-    			if (version.isNewVersion) {
-    				async function fetchInfo(url) {
-    					try { return JSON.parse(await fetchTXT(url)) } catch (e) {}
-    				}
-    				const info = await fetchInfo("Version/UPDATA_INFO.json");
-    				const ASK = `发现新版本 ${version.version}\n` + logVersionInfo(version.version, info) + "\n";
-    				const PS = `是否更新？\n\n${strLen("",15)}[取消] = 不更新${strLen("",10)}[确定] = 更新`;
-    				const title = ASK + PS;
-    				const msg = window.msg || window["fullscreenUI"] && fullscreenUI.contentWindow.msg;
-    				if (msg) {
-    					msg({
-    						title,
-    						butNum: 2,
-    						lineNum: title.split("\n").length + 2,
-    						textAlign: "left",
-    						enterTXT: "取消",
-    						cancelTXT: "更新",
-    						callEnter: () => { delayCheckVersion() },
-    						callCancel: () => { resetAndUpData() }
-    					})
-    				}
-    				else {
-    					(checkVersion && confirm(ASK + PS)) ? resetAndUpData(): delayCheckVersion()
-    				}
-    			}
-    		}
-    	} catch (e) { alert(e.stack) }
-    }
-    */
 
     //------------------------ cache -----------------------------------------
     

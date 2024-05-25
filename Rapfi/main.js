@@ -180,11 +180,38 @@
             }
         },
         {
-            type: "button",
-            text: "输出sgf",
+            type: "checkbox",
+            text: "标记局面",
             touchend: async function() {
                 try {
-                	downloadsgf();
+                	
+                } catch (e) { console.error(e.stack) }
+            }
+        },
+        {
+            type: "button",
+            text: "批量JPG",
+            touchend: async function() {
+                try {
+                	downloadZIP("jpg")
+                } catch (e) { console.error(e.stack) }
+            }
+        },
+        {
+            type: "button",
+            text: "批量SVG",
+            touchend: async function() {
+                try {
+                	downloadZIP("svg")
+                } catch (e) { console.error(e.stack) }
+            }
+        },
+        {
+            type: "button",
+            text: "批量SGF",
+            touchend: async function() {
+                try {
+                	downloadZIP("sgf")
                 } catch (e) { console.error(e.stack) }
             }
         },
@@ -198,7 +225,6 @@
     buttonSettings.splice(24, 0, null, null);
     buttonSettings.splice(28, 0, null, null);
     buttonSettings.splice(32, 0, null, null);
-    buttonSettings.splice(36, 0, null, null);
     //dw > dh && buttonSettings.splice(0, 0, null, null, null, null);
 
     function $(id) { return document.getElementById(id) };
@@ -866,22 +892,32 @@
 		return sgf
 	}
 	
-	async function downloadsgf() {
+	async function downloadZIP(type) {
 		const MS = cBoard.MS.slice(0, cBoard.MSindex + 1);
 		const oldText = btnPlay.text;
         btnPlay.checked = false;
         btnPlay.touchend();
         btnPlay.setText("停止搜索");
+        type = {jpg: "jpg", svg: "svg", sgf: "sgf"}[type] || "svg";
         try{
 		let count = 0;
 		const zip = new JSZip();
+		const addFile = {
+			jpg: async() => {
+				const blob = await new Promise(resolve => cBoard.canvas.toBlob(blob => resolve(blob), "image/jpeg", 0.1))
+				await zip.file(`${++count}.${type}`, blob);
+			},
+			svg: async() => {
+				await zip.file(`${++count}.${type}`, cBoard.getSVG());
+			},
+			sgf: async() => {
+				await zip.file(`${++count}.${type}`, createSGFStrinc(cBoard));
+			}
+		}[type]
 		await game.forEveryPosition({
 			filterNodes: async(nodes) => nodes.filter(node => !node.color || node.color == "black"),
 			callback: () => {},
-			callback2: async () => {
-				count++;
-				await zip.file(`${count}.sgf`, createSGFStrinc(cBoard));
-			},
+			callback2: addFile,
 			condition: () => btnPlay.checked
 		});
 			
@@ -892,9 +928,9 @@
 			}
 		});
 		log("downloading...")
-		const _filename = (game.filename ? game.filename + "." : "") + "sgf.zip";
+		const _filename = (game.filename ? game.filename + "." : "") + type + ".zip";
 		msg({
-			title: `${count}个局面转成sgf文件\n打包在“${_filename}”\n是否下载文件`,
+			title: `${count}个局面转成${type}文件\n打包在“${_filename}”\n是否下载文件`,
 			butNum: 2
 		})
 		.then(({butCode}) => butCode==1 && saveFile.save(data, _filename))

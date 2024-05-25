@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.25";
+    const scriptVersion = "v2024.26001";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -137,7 +137,7 @@
      /**
      * 从 currentCache 读取版本信息，如果没有就尝试联网更新，更新成功就初始化 currentCache
      */
-	var waitingCacheReady = undefined;
+	var waitingCacheReady;
 	async function waitCacheReady(client) {
 		const url = formatURL(VERSION_JSON);
 		waitingCacheReady = waitingCacheReady || Promise.resolve()
@@ -194,7 +194,7 @@
 	 * 初始化缓存
  	*/
     async function resetCache(cacheKey, cacheInfo) {
-    	const url = formatURL(VERSION_JSON, cacheKey);
+    	const url = formatURL(VERSION_JSON);
     	postMsg({cmd:"log", msg: `reset ${cacheKey} version: ${cacheInfo && cacheInfo.version}`})
     	return caches.delete(cacheKey)
     		.then(() => caches.open(cacheKey))
@@ -340,9 +340,10 @@
     /**
      * 联网刷新版本信息，成功后缓存离线资源，新版本缓存完成后通知用户
      */
-    var waitingUpdateCache = undefined;
+    var waitingUpdateCache;
     async function updateCache(client, progress) {
     	const url = formatURL(VERSION_JSON);
+    	updateFilesProgress = updateFilesProgress || progress;
     	waitingUpdateCache = waitingUpdateCache || Promise.resolve()
     		.then(() => (postMsg({cmd: "log", msg: "updating......"}, client), updateStatus = CacheStatus.UPDATING))
     		.then(() => onlyNet(url, undefined, client))
@@ -437,7 +438,7 @@
     	
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
-    		const _URL = formatURL(request.url, version);
+    		const _URL = formatURL(request.url);
     		postMsg({cmd: "error", msg: `loadCache response: 404.html`}, client)
     		return loadCache(_URL, version, client)
     			.then(response => {
@@ -538,7 +539,7 @@
     		const responsePromise = waitCacheReady(event.clientId)
     			.then(() => tryUpdate(event.clientId))
     			.then(() => {
-    				const _URL = formatURL(event.request.url, currentCacheKey);
+    				const _URL = formatURL(event.request.url);
     				const execStore = /\?cache\=onlyNet|\?cache\=onlyCache|\?cache\=netFirst|\?cache\=cacheFirst/.exec(event.request.url);
     				const storeKey = null == execStore ? "default" : execStore[0];
     				const waitResponse = {
