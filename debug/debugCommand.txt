@@ -437,3 +437,31 @@ console.log(s)
         			})
         			
     ("<br><br>as<br>\nas<bR>\n<br>").replace(/^(\<br\>|\n)+|(\<br\>|\n)+$/ig, 556)
+    
+    caches.open("currentCache")
+        	.then(cache=>cache.matchAll())
+        	.then(responses => responses.map(response=>console.log(decodeURIComponent(response.url))))
+   
+   caches.open("localCache")
+          	.then(cache=>Promise.all([cache, cache.keys()]))
+          	.then(([cache, keys])=>keys.map(key=>cache.match(key).then(r=>console.log([key, r.url]))))
+          	
+    
+    async function copyCache(targetCacheKey, sourceCacheKey) {
+    	return Promise.all([caches.open(targetCacheKey), caches.open(sourceCacheKey)])
+		.then(([targetCache, sourceCache]) => {
+			return sourceCache.keys().then(requests => {
+				const ps = requests.map(request => sourceCache.match(request).then(response => targetCache.put(request, response)));
+				return Promise.all(ps);
+			})
+		})
+		.then(() => true)
+		.catch(()=> false)
+	}
+	
+	
+			copyCache("temp", "currentCache")
+			.then(console.log)
+			.then(() => upData.logCaches())
+			.then(console.log)
+			.catch(console.error)

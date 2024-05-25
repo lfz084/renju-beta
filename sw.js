@@ -1,12 +1,12 @@
-    const DEBUG_SERVER_WORKER = false;
-    const SCRIPT_VERSION = "v2024.23206";
+    const DEBUG_SERVER_WORKER = true;
+    const SCRIPT_VERSION = "v2024.23220";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
     const currentCacheKey = "currentCache" + beta; 
     const updataCacheKey = "updataCache" + beta; 
     const refreshVersionInterval = 3600 * 1000;
-    const firstUpdateCacheDelay = 6 * 3600 * 1000;
+    const firstUpdateCacheDelay = 3 * 3600 * 1000;
     const CacheStatus = {
     	UPDATE: 1,
     	UPDATING: 2,
@@ -108,13 +108,10 @@
     	return "?v=" + version;
     }
 
-    function formatURL(url, version) {
-    	const _msg = `sw.js: formatURL("${url}")`;
+    function formatURL(url) {
     	url = url.split("?")[0].split("#")[0];
-    	const URL_VERSION = getUrlVersion(version);
     	const indexHtml = url.split("/").pop().indexOf(".") == -1 ? (url.slice(-1) == "/" ? "" : "/") + "index.html" : "";
     	url = url + indexHtml;
-    	//postMsg(`${_msg} "${url}"`)
     	return url;
     }
     
@@ -181,6 +178,7 @@
  	*/
     async function resetCache(cacheKey, cacheInfo) {
     	const url = formatURL(VERSION_JSON, cacheKey);
+    	postMsg({cmd:"log", msg: `reset ${cacheKey} version: ${cacheInfo && cacheInfo.version}`})
     	return caches.delete(cacheKey)
     		.then(() => caches.open(cacheKey))
     		.then(cache => {
@@ -198,10 +196,26 @@
     async function checkCache(client, cacheKey) {
     	let count = 0;
     	const ps = [];
-    	const info = cacheKey == "currentCache" ? currentVersionInfo : updateVersionInfo;
+    	const info = cacheKey.indexOf("currentCache")===0 ? currentVersionInfo : updateVersionInfo;
     	const urls = Object.keys(info.files).map(key => info.files[key]).map(url => formatURL(url));
-    	urls.map(url => ps.push(loadCache(url, cacheKey + beta, client).then(response => response.ok && count++)));
+    	cacheKey = cacheKey.indexOf("currentCache")===0 ? currentCacheKey : updataCacheKey;
+    	urls.map(url => ps.push(loadCache(url, cacheKey, client).then(response => response.ok && count++)));
     	return Promise.all(ps).then(() => count == urls.length)
+    }
+    
+    /**
+     * 复制 cache，成功返回 true，失败返回 false
+     */
+    async function copyCache(targetCacheKey, sourceCacheKey) {
+    	return Promise.all([caches.open(targetCacheKey), caches.open(sourceCacheKey)])
+    		.then(([targetCache, sourceCache]) => {
+    			return sourceCache.keys().then(requests => {
+    				const ps = requests.map(request => sourceCache.match(request).then(response => targetCache.put(request, response)));
+    				return Promise.all(ps);
+    			})
+    		})
+    		.then(() => true)
+    		.catch(() => false)
     }
     
     /**
@@ -213,21 +227,12 @@
     		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache start"}, client))
     		.then(() => resetCache(currentCacheKey, updateVersionInfo))
     		.then(info => currentVersionInfo = info)
-    		.then(() => Promise.all([caches.open(currentCacheKey), caches.open(updataCacheKey)]))
-    		.then(([currentCache, updataCache]) => {
-    			const ps = [];
-    			updataCache.matchAll().then(responses => {
-    				responses.map(response => ps.push(currentCache.put(new Request(formatURL(response.url), requestInit), response)))
-    			})
-    			return Promise.all(ps);
-    		})
-    		.then(() => checkCache(client, currentCache))
+    		.then(() => copyCache(currentCacheKey, updataCacheKey))
+    		.then(() => checkCache(client, currentCacheKey))
     		.then(done => {
-    			if (done) {
-    				caches.delete(updataCacheKey);
-    				postMsg({cmd: "log", msg: "copyToCurrentCache end"}, client);
-    				waitingCopyToCurrentCache = undefined
-    			}
+    			done && caches.delete(updataCacheKey);
+    			postMsg({cmd: "log", msg: `copyToCurrentCache ${done?"done":"error"}`}, client);
+    			waitingCopyToCurrentCache = undefined
     		})
     	return waitingCopyToCurrentCache;
     }
@@ -252,14 +257,19 @@
     							return loadCache(url, tempCacheKey)
     								.then(response => {
     									if (response.ok) {
-    										postMsg(`updateFiles ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
+    										postMsg(`copy ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
     										let cloneRes = response.clone();
     										return caches.open(cacheKey).then(cache => cache.put(new Request(url, requestInit), cloneRes)).then(()=>response)
     									}
+    									postMsg(`fetch ${decodeURIComponent(url)}`)
     									return response;
     								})
     						}
-    						else return response;
+    						else {
+    							response.ok && postMsg(`load ${cacheKey} ${decodeURIComponent(url)}`)
+    							!response.ok && postMsg(`fetch ${decodeURIComponent(url)}`)
+    							return response;
+    						}
     					})
     					.then(response => !response.ok ? fetchAndPutCache(url, cacheKey) : response)
     					.then(response => {

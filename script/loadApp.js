@@ -1,5 +1,5 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23206";
+//self.SCRIPT_VERSIONS["renju"] = "2024.23206";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
@@ -109,7 +109,7 @@ window.loadApp = (() => { // 按顺序加载应用
     function onerror(err) {
     	const ASK = `❌加载过程出现了错误...\n${err && err.stack || err}\n\n`;
     	const PS = `是否重置数据\n\n`;
-    	if (window.vConsole || window.parent.vConsole || window["fullscreenUI"] && fullscreenUI.contentWindow.vConsole) {
+    	if (false && (window.vConsole || window.parent.vConsole || window["fullscreenUI"] && fullscreenUI.contentWindow.vConsole)) {
     		console.error(ASK);
     		setTimeout(() => {
     			"caches" in self && caches.open("log").then(cache => cache.match("log")).then(response => response.text()).then(console.log)

@@ -1,4 +1,4 @@
-if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "v2024.23206";
+//if (self.SCRIPT_VERSIONS) self.SCRIPT_VERSIONS["CheckerBoard"] = "2024.23206";
 (function(global, factory) {
     (global = global || self, factory(global));
 }(this, (function(exports) {
