@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const SCRIPT_VERSION = "v2024.23200";
+    const SCRIPT_VERSION = "v2024.23206";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -221,9 +221,14 @@
     			})
     			return Promise.all(ps);
     		})
-    		.then(() => caches.delete(updataCacheKey))
-    		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache end"}, client))
-    		.then(() => waitingCopyToCurrentCache = undefined)
+    		.then(() => checkCache(client, currentCache))
+    		.then(done => {
+    			if (done) {
+    				caches.delete(updataCacheKey);
+    				postMsg({cmd: "log", msg: "copyToCurrentCache end"}, client);
+    				waitingCopyToCurrentCache = undefined
+    			}
+    		})
     	return waitingCopyToCurrentCache;
     }
     
@@ -249,7 +254,7 @@
     									if (response.ok) {
     										postMsg(`updateFiles ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
     										let cloneRes = response.clone();
-    										caches.open(cacheKey).then(cache => cache.put(new Request(url, requestInit), cloneRes))
+    										return caches.open(cacheKey).then(cache => cache.put(new Request(url, requestInit), cloneRes)).then(()=>response)
     									}
     									return response;
     								})
@@ -410,7 +415,7 @@
     		.then(response => {
     			if (response.ok && url.indexOf("blob:http") == -1) {
     				let cloneRes = response.clone();
-    				caches.open(version).then(cache => cache.put(new Request(url, requestInit), cloneRes))
+    				return caches.open(version).then(cache => cache.put(new Request(url, requestInit), cloneRes)).then(()=>response)
     			}
     			return response;
     		})
@@ -531,7 +536,8 @@
 			clearInterval(log2cacheTimer);
 			postDelayMessages();
 			/*预防 serviceWorker 意外重启，关闭加载动画*/
-			load.finish(url, client);
+			load.finish(url, currentClient);
+			tryUpdate(currentClient);
 		}
 	}, 1000)
 		
@@ -631,4 +637,3 @@
     loadUpdateVersionInfo(currentClient);
     localCache.getItem("lastRefreshTime").then(v => lastRefreshTime = (v && v * 1 || 0))
     localCache.getItem("createTime").then(v => v * 1 ? (createTime = v * 1) : (createTime = new Date().getTime(), localCache.setItem("createTime", createTime)))
-				
