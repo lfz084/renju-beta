@@ -67,6 +67,7 @@
             change: async function() {
                 try {
                 	await game.openFile(this);
+                	game.tree = undefined;
 					window.setBlockUnload(true)
                 } catch (e) { console.error(e.stack) }
                 this.value = "";
@@ -77,6 +78,8 @@
             text: "清空标记",
             touchend: async function() {
                 game.cleLabel();
+                game.tree = undefined;
+                btnMark.checked && btnMark.defaultontouchend();
             }
         },
         {
@@ -180,11 +183,14 @@
             }
         },
         {
+            varName:"btnMark",
             type: "checkbox",
             text: "标记局面",
             touchend: async function() {
                 try {
-                	
+            		const path = cBoard.MS.slice(0, cBoard.MSindex+1);
+                	const node = this.checked ? (game.tree = game.tree || new RenjuTree(), game.tree.createPath(path)) : (game.tree && game.tree.getPathNode(path));
+                	node && (node.score = this.checked ? 1 : 0);
                 } catch (e) { console.error(e.stack) }
             }
         },
@@ -287,6 +293,7 @@
     	btnRotateY180,
     	btnRule, 
     	btnEncoding,
+    	btnMark,
     	btnAIPlay,
     	btnPlay,
     	btnRandomPlay,
@@ -413,9 +420,10 @@
     const game = {
     	filename: "",
         rule: Rule.RENJU,
+        tree: undefined,
         cBoard: cBoard,
         searching: false,
-
+        
         toStart: function(isShowNum) {
         	this.stopThinking();
             cBoard.toStart(isShowNum);
@@ -704,13 +712,18 @@
 
     //------------------------ Events ---------------------------
 
-    game.cBoard.stonechange = function() { 
+    game.cBoard.stonechange = async function() { 
     	if (game.searching) return;
     	if (btnPlay.checked) {
     		cBoard.cleLb("all");
     	}
     	else {
-    		game.showBranchNodes();
+    		await game.showBranchNodes();
+    		const path = cBoard.MS.slice(0, cBoard.MSindex+1);
+            const node = game.tree && game.tree.getPathNode(path);
+            const slt = !!(node && node.score);
+            btnMark.checked = !slt;
+            btnMark.defaultontouchend();
     	}
     };
 
@@ -898,9 +911,10 @@
         btnPlay.checked = false;
         btnPlay.touchend();
         btnPlay.setText("停止搜索");
-        type = {jpg: "jpg", svg: "svg", sgf: "sgf"}[type] || "svg";
+        
         try{
-		let count = 0;
+		type = {jpg: "jpg", svg: "svg", sgf: "sgf"}[type] || "svg";
+        let count = 0;
 		const zip = new JSZip();
 		const addFile = {
 			jpg: async() => {
@@ -914,12 +928,25 @@
 				await zip.file(`${++count}.${type}`, createSGFStrinc(cBoard));
 			}
 		}[type]
-		await game.forEveryPosition({
+		
+		!game.tree && await msg("你没有手动标记局面\n默认输出所有分支最后一手的局面")
+		
+		game.tree ?
+		(await game.tree.mapAsync(async(node, path) => {
+			if (node.score) {
+				cBoard.toStart(true);
+				cBoard.MS = path;
+				cBoard.MSindex = -1;
+				cBoard.toEnd(true);
+				await addFile();
+			}
+		})) :
+		(await game.forEveryPosition({
 			filterNodes: async(nodes) => nodes.filter(node => !node.color || node.color == "black"),
 			callback: () => {},
 			callback2: addFile,
 			condition: () => btnPlay.checked
-		});
+		}))
 			
 		let data = await zip.generateAsync({ type: "blob" }, function updateCallback(metadata) {
 			log("progression: " + metadata.percent.toFixed(2) + " %");
@@ -935,6 +962,7 @@
 		})
 		.then(({butCode}) => butCode==1 && saveFile.save(data, _filename))
         }catch(e){console.error(e.stack)}
+        
         btnPlay.checked && btnPlay.touchend();
         btnPlay.setText(oldText);
         cBoard.toStart(true);
