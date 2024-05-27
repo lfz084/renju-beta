@@ -94,7 +94,7 @@
     	log("<br>");
     	await updateServiceWorker();
     	upData.resetUpdataVersion();
-    	const ok = await serviceWorker.postMessage({cmd: "copyToCurrentCache"}, 60 * 1000).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`));
+    	const ok = await serviceWorker.postMessage({cmd: "copyToCurrentCache"}, 60 * 1000).then(ok => (log(`${ok && "更新完成<br>" || "更新失败<br>"}`), ok));
     	ok && toIndex()
     }
     

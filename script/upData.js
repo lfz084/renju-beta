@@ -488,6 +488,7 @@ window.upData = window.parent.upData || (function() {
         get checkAppVersion() { return checkAppVersion },
         get checkScriptVersion() { return checkScriptVersion },
     	
+        get deleteCache() { return deleteCache },
         get removeAppCache() { return removeAppCache },
         get removeOldAppCache() { return removeOldAppCache },
         get resetAndUpData() { return resetAndUpData },
