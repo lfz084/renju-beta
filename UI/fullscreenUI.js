@@ -175,8 +175,7 @@ window.fullscreenUI = (() => {
 				IFRAME.contentWindow.addEventListener("touchend", touchend, true);
 				IFRAME.contentWindow.addEventListener("mouseup", touchend, true);
 				//firstRequestFullscreen(IFRAME.contentWindow);
-				show();
-				loadTheme();
+				loadTheme().then(()=>show());
 				bodyDiv.setAttribute("class", "showBody");
 			}, true);
 
