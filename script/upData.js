@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.26002";
+    const scriptVersion = "v2024.26003";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -211,7 +211,7 @@ window.upData = window.parent.upData || (function() {
     
     async function refreshVersionInfos() {
     	const updataScriptVersion = scriptVersion;
-    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 60 * 1000)
+    	return serviceWorker.postMessage({ cmd: "refreshVersionInfos" }, 30 * 1000)
     		.then(({ scriptVersion, currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo }) => {
     			currentVersion = currentVersionInfo && currentVersionInfo.version;
     			updateVersion = updateVersionInfo && updateVersionInfo.version;
@@ -353,7 +353,7 @@ window.upData = window.parent.upData || (function() {
     			else rt.title = "没有发现新版本\n"
     		}
     		return rt;
-    	} catch (e) { alert(e.stack) }
+    	} catch (e) { console.error(e.stack) }
     }
 
     //------------------------ cache -----------------------------------------

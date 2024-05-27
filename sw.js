@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.26002";
+    const scriptVersion = "v2024.26003";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -66,10 +66,12 @@
     
     Cache.prototype.putJSON = async function (key, value) {
 		return this.put(new Request(key), new Response(JSON.stringify(value)))
+			.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js putJSON: Unknown error") }))
     }
     
     Cache.prototype.getJSON = async function(key) {
     	return this.match(new Request(key)).then(response => response && response.text()).then(text => text && JSON.parse(text))
+			.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js getJSON: Unknown error") }))
     }
     
     self.localCache = function() {
@@ -125,7 +127,7 @@
     		function next() {
     			const args = Array.isArray(paramQueue[index]) ? paramQueue[index] : [paramQueue[index]];
     			if (index++ < paramQueue.length) {
-    				Promise.resolve().then(() => fun(...args)).then(next).catch(e=>reject(e && e.stack || e))
+    				Promise.resolve().then(() => fun(...args)).then(next).catch(e=>reject(e && e.stack || e && e.message || JSON.stringify(e || "sw.js queue: Unknown error")))
     			}
     			else resolve()
     		}
@@ -218,7 +220,7 @@
     	const paramQueue = urls.map(url => [url, cacheKey, client]) || [];
     	return queue((url, cacheKey, client) => loadCache(url, cacheKey, client).then(response => response.ok && count++), paramQueue)
     		.then(() => count == urls.length)
-    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}, client), false))
+    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js checkCache: Unknown error")}, client), false))
     }
     
     /**
@@ -234,7 +236,7 @@
     			}, requests))
     		})
     		.then(() => true)
-    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e}), false))
+    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js copyCache: Unknown error")}), false))
     		.then(done => (waitingCopyCache = undefined,done))
     	return waitingCopyCache;
     }
@@ -246,8 +248,7 @@
     async function copyToCurrentCache(client) {
     	waitingCopyToCurrentCache = waitingCopyToCurrentCache || Promise.resolve()
     		.then(() => postMsg({cmd: "log", msg: "copyToCurrentCache start"}, client))
-    		.then(() => resetCache(currentCacheKey, updateVersionInfo))
-    		.then(info => currentVersionInfo = info)
+    		.then(() => currentVersionInfo.version != updateVersionInfo.version && resetCache(currentCacheKey, updateVersionInfo).then(info => currentVersionInfo = info))
     		.then(() => copyCache(currentCacheKey, updataCacheKey))
     		.then(done => done && checkCache(client, currentCacheKey))
     		.then(done => {
@@ -367,7 +368,7 @@
     			lastRefreshTime = new Date().getTime() + refreshVersionInterval;
 				return localCache.setItem("lastRefreshTime", lastRefreshTime).then(()=>updated)
 			})
-    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || e }, client))
+    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js updateCache: Unknown error") }, client))
     		.then(updated => (updateStatus = CacheStatus.UPDATE, waitingUpdateCache = undefined, updated))
     	return waitingUpdateCache;
     }
@@ -427,6 +428,7 @@
     function putCache(version, request, response) {
     	return caches.open(version)
     		.then(cache => cache.put(request, response.clone()))
+    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js putCache: Unknown error") }))
     		.then(()=>response)
     }
     
@@ -564,8 +566,8 @@
     				return waitResponse(_URL, version, event.clientId)
     					.then(response => addHTMLCode(response));
     			})
-    			.catch(err => {
-    				return new Response(err ? JSON.stringify(err && err.stack || err, null, 2) : response_err_data, response_404_init_data)
+    			.catch(e => {
+    				return new Response(e ? JSON.stringify(e && e.stack || e && e.message || e || "sw.js fetch Event: Unknown error", null, 2) : response_err_data, response_404_init_data)
     			})
     			
     		event.respondWith(responsePromise);
