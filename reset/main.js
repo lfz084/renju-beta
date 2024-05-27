@@ -69,8 +69,8 @@
     	upData.resetUpdataVersion()
     	await removeCaches()
     	await serviceWorker.postMessage({cmd: "waitCacheReady"}, 60 * 1000)
-    	await saveCacheFiles()
-    	toIndex()
+    	const ok = await saveCacheFiles();
+    	ok && toIndex()
     }
     
     async function saveCacheFiles() {
@@ -80,6 +80,7 @@
     	const { currentCacheKey } = await serviceWorker.postMessage({cmd: "getCacheKeys"}, 5000);
     	const errCount = await upData.saveCacheFiles(urls, currentCacheKey);
     	log(`缓存结束,${errCount}个文件错误<br>`)
+    	return !errCount;
     }
     
     async function updateCache() {
@@ -93,8 +94,8 @@
     	log("<br>");
     	await updateServiceWorker();
     	upData.resetUpdataVersion();
-    	await serviceWorker.postMessage({cmd: "copyToCurrentCache"}, 60 * 1000).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`))
-    	toIndex()
+    	const ok = await serviceWorker.postMessage({cmd: "copyToCurrentCache"}, 60 * 1000).then(ok => log(`${ok && "更新完成<br>" || "更新失败<br>"}`));
+    	ok && toIndex()
     }
     
     async function logNewVersion() {

@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.26005";
+    const scriptVersion = "v2024.26006";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -263,6 +263,10 @@
     		.then(done => {
     			done && deleteCache(updataCacheKey);
     			postMsg({cmd: "log", msg: `copyToCurrentCache ${done?"done":"error"}`}, client);
+    			return done;
+    		})
+    		.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js copyToCurrentCache: Unknown error")}), false))
+    		.then(done => {
     			waitingCopyToCurrentCache = undefined;
     			return done;
     		})
@@ -317,6 +321,7 @@
     		}, files).then(() => countCacheFiles == numAllFiles)
     	})
     	.then(updated => updated && checkCache(client, cacheKey))
+    	.catch(e => (postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js updateFiles: Unknown error")}), false))
     	.then(updated => {
     		versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE);
     		postMsg({cmd: "log", msg: `files ${updated ? "updated" : "fout"}`}, client);
@@ -343,6 +348,7 @@
     				updateCache(client)
     			}
     		})
+    		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || "sw.js tryUpdate: Unknown error")}))
     		.then(() => setTimeout(() => { waitingTryUpdate = undefined }, Math.min(180 * 1000, refreshVersionInterval, firstUpdateCacheDelay)))
     	return waitingTryUpdate;
     }
