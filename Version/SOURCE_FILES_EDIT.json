@@ -1,5 +1,5 @@
 {
-	"version": "v2024.26008",
+	"version": "v2024.26009",
 	"files": {
 		"CheckerBoard": "CheckerBoard/CheckerBoard.js",
 		"image2board": "CheckerBoard/image2board.js",
@@ -308,18 +308,18 @@
 		"tuya_html": "tuya.html",
 		"upData_html": "upData.html",
 		
-		"zy_enMedium_ttf": "style/font/NotoSans-Medium.subset.ttf",
-		"zy_enBold_ttf": "style/font/NotoSans-SemiBold.subset.ttf",
-		"zy_enHeavy_ttf": "style/font/NotoSans-Bold.subset.ttf",
-		"zz_cnMedium_ttf": "style/font/NotoSansSC-Medium.subset.ttf",
-		"zz_cnBold_ttf": "style/font/NotoSansSC-SemiBold.subset.ttf",
-		"zz_cnHeavy_ttf": "style/font/NotoSansSC-Bold.subset.ttf",
-		"zz_emjMedium_ttf": "style/font/SourceHanSansCN-Medium.subset.ttf",
-		"zz_emjBold_ttf": "style/font/SourceHanSansCN-Bold.subset.ttf",
-		"zz_emjHeavy_ttf": "style/font/SourceHanSansCN-Heavy.subset.ttf",
-		"zz_Symbola_ttf": "style/font/Symbola.subset.ttf",
+		"enMedium_ttf": "style/font/NotoSans-Medium.subset.ttf",
+		"enBold_ttf": "style/font/NotoSans-SemiBold.subset.ttf",
+		"enHeavy_ttf": "style/font/NotoSans-Bold.subset.ttf",
+		"cnMedium_ttf": "style/font/NotoSansSC-Medium.subset.ttf",
+		"cnBold_ttf": "style/font/NotoSansSC-SemiBold.subset.ttf",
+		"cnHeavy_ttf": "style/font/NotoSansSC-Bold.subset.ttf",
+		"emjMedium_ttf": "style/font/SourceHanSansCN-Medium.subset.ttf",
+		"emjBold_ttf": "style/font/SourceHanSansCN-Bold.subset.ttf",
+		"emjHeavy_ttf": "style/font/SourceHanSansCN-Heavy.subset.ttf",
+		"Symbola_ttf": "style/font/Symbola.subset.ttf",
 		
-		"zz_PFSCMedium_js": "pdf/SourceHanSansCN-Medium_jsPdf.subset-normal.js",
-		"zz_PFSCHeavy_js": "pdf/SourceHanSansCN-Heavy_jsPdf.subset-normal.js"
+		"PFSCMedium_js": "pdf/SourceHanSansCN-Medium_jsPdf.subset-normal.js",
+		"PFSCHeavy_js": "pdf/SourceHanSansCN-Heavy_jsPdf.subset-normal.js"
 	}
 }

@@ -9,11 +9,11 @@
     const fontScripts = {
     	"PFSCMedium": {
     		status: "unloaded",
-    		url: window["SOURCE_FILES"] && window["SOURCE_FILES"]["zz_PFSCMedium_js"] || "pdf/SourceHanSansCN-Medium_jsPdf.subset-normal.js"
+    		url: window["SOURCE_FILES"] && window["SOURCE_FILES"]["PFSCMedium_js"] || "pdf/SourceHanSansCN-Medium_jsPdf.subset-normal.js"
     	},
 		"PFSCHeavy": {
     		status: "unloaded",
-			url: window["SOURCE_FILES"] && window["SOURCE_FILES"]["zz_PFSCHeavy_js"] || "pdf/SourceHanSansCN-Heavy_jsPdf.subset-normal.js"
+			url: window["SOURCE_FILES"] && window["SOURCE_FILES"]["PFSCHeavy_js"] || "pdf/SourceHanSansCN-Heavy_jsPdf.subset-normal.js"
 		}
     }
     
