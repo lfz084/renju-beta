@@ -1,5 +1,5 @@
-    const DEBUG_SERVER_WORKER = true;
-    const SCRIPT_VERSION = "v2024.23189";
+    const DEBUG_SERVER_WORKER = false;
+    const SCRIPT_VERSION = "v2024.23200";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -72,33 +72,35 @@
     	return this.match(new Request(key)).then(response => response && response.text()).then(text => text && JSON.parse(text))
     }
     
-    caches.setItem = async function(key, value) {
-    	return new Promise(resolve => {
-    		try {
-    			key = key.toString();
-    			value = value.toString();
-    			caches.open("localCache").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
-    		} catch (e) { resolve() }
-    	});
-    }
-    
-    caches.getItem = async function(key) {
-    	return new Promise(resolve => {
-    		try {
-    			key = key.toString();
-    			caches.open("localCache").then(cache => cache.match(new Request(key))).then(response => response.text()).then(value => resolve(value)).catch(() => resolve());
-    		} catch (e) { resolve() }
-    	});
-    }
-    
-    caches.removeItem = async function(key) {
-    	return new Promise(resolve => {
-    		try {
-    			key = key.toString();
-    			caches.open("localCache").then(cache => cache.delete(new Request(key))).then(() => resolve(true)).catch(() => resolve(false));
-    		} catch (e) { resolve(false) }
-    	});
-    }
+    self.localCache = function() {
+    	return {
+    		setItem: async function(key, value) {
+    			return new Promise(resolve => {
+    				try {
+    					key = key.toString();
+    					value = value.toString();
+    					caches.open("localCache").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
+    				} catch (e) { resolve() }
+    			});
+    		},
+    		getItem: async function(key) {
+    			return new Promise(resolve => {
+    				try {
+    					key = key.toString();
+    					caches.open("localCache").then(cache => cache.match(new Request(key))).then(response => response.text()).then(value => resolve(value)).catch(() => resolve());
+    				} catch (e) { resolve() }
+    			});
+    		},
+    		removeItem: async function(key) {
+    			return new Promise(resolve => {
+    				try {
+    					key = key.toString();
+    					caches.open("localCache").then(cache => cache.delete(new Request(key))).then(() => resolve(true)).catch(() => resolve(false));
+    				} catch (e) { resolve(false) }
+    			});
+    		}
+    	}
+    }()
     
     //----------------------------------------------------------------------------------------------
     
@@ -234,8 +236,27 @@
     	return new Promise(resolve => {
     		async function updateFile() {
     			if (files.length && versionInfo["status"] == CacheStatus.UPDATING) {
-    				const url = formatURL(new Request(files.shift()).url);
-    				return cacheFirst(url, cacheKey)/* 不要client参数，onlyNet不开加载动画*/
+    				const item = files.shift();
+    				const key = item.key;
+    				const url = formatURL(new Request(item.url).url);
+    				return loadCache(url, cacheKey)/* 不要client参数，onlyNet不开加载动画*/
+    					.then(response => {
+    						const tempCacheKey =  cacheKey == updataCacheKey ? currentCacheKey : updataCacheKey;
+    						const tempVersionInfo = cacheKey == updataCacheKey ? currentVersionInfo : updateVersionInfo;
+    						if (!response.ok && tempVersionInfo && tempVersionInfo["files"] && tempVersionInfo["md5"] && versionInfo["files"][key] == tempVersionInfo["files"][key] && versionInfo["md5"][key] == tempVersionInfo["md5"][key]) {
+    							return loadCache(url, tempCacheKey)
+    								.then(response => {
+    									if (response.ok) {
+    										postMsg(`updateFiles ${tempCacheKey} to ${cacheKey} ${decodeURIComponent(url)}`)
+    										let cloneRes = response.clone();
+    										caches.open(cacheKey).then(cache => cache.put(new Request(url, requestInit), cloneRes))
+    									}
+    									return response;
+    								})
+    						}
+    						else return response;
+    					})
+    					.then(response => !response.ok ? fetchAndPutCache(url, cacheKey) : response)
     					.then(response => {
     						response.ok && countCacheFiles++;
     						updateFile()
@@ -245,11 +266,12 @@
     				return resolve(countCacheFiles == numAllFiles);
     			}
     		}
-    		const files = Object.keys(versionInfo["files"]).map(key=>versionInfo["files"][key]);
+    		const files = Object.keys(versionInfo["files"]).map(key=>({key: key, url: versionInfo["files"][key]}));
     		const numAllFiles = files.length;
     		let countCacheFiles = 0;
     		updateFile()
     	})
+    	.then(updated => updated && checkCache(client, cacheKey))
     	.then(updated => versionInfo["status"] = (updated ? CacheStatus.UPDATED : CacheStatus.UPDATE))
     	.then(status => (postMsg({cmd: "log", msg: `files ${status == CacheStatus.UPDATED  ? "updated" : "fout"}`}, client), status == CacheStatus.UPDATED && cacheKey == updataCacheKey && postMsg({cmd: "copyToCurrentCache"}, client)))
     }
@@ -282,7 +304,7 @@
     		.then(() => (postMsg({cmd: "log", msg: "updating......"}, client), updateStatus = CacheStatus.UPDATING))
     		.then(() => onlyNet(url, undefined, client))
     		.then(response => (response && response.ok) ? response.json() : Promise.reject("updateCache: 联网刷新版本信息失败，跳过后续更新"))
-    		.then(versionInfo => versionInfo["version"] == currentVersionInfo["version"] ? { cacheKey: currentCacheKey, oldInfo: currentVersionInfo, newInfo: versionInfo } : { cacheKey: updataCacheKey, oldInfo: updateVersionInfo || JSON.parse(JSON.stringify(currentVersionInfo, null, 2)), newInfo: versionInfo })
+    		.then(versionInfo => versionInfo["version"] == currentVersionInfo["version"] ? { cacheKey: currentCacheKey, oldInfo: currentVersionInfo, newInfo: versionInfo } : { cacheKey: updataCacheKey, oldInfo: (updateVersionInfo = updateVersionInfo || JSON.parse(JSON.stringify(currentVersionInfo, null, 2))), newInfo: versionInfo })
     		.then(({cacheKey, oldInfo, newInfo}) => {
     			if (oldInfo["version"] != newInfo["version"]) {
     				return resetCache(cacheKey, newInfo)
@@ -299,7 +321,7 @@
     		.then(({cacheKey, versionInfo}) => updateFiles(cacheKey, versionInfo, client))
     		.then(() => {
     			lastRefreshTime = new Date().getTime() + refreshVersionInterval;
-				return caches.setItem("lastRefreshTime", lastRefreshTime)
+				return localCache.setItem("lastRefreshTime", lastRefreshTime)
 			})
     		.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || e }, client))
     		.then(() => (updateStatus = CacheStatus.UPDATE, waitingUpdateCache = undefined))
@@ -359,7 +381,7 @@
      * 返回标记为404 错误的response, HTML 页面做特殊处理
      */
     function fetchError(err, url, version, client) {
-    	const type = url.split("?")[0].split("#")[0].split(".").pop();
+    	const type = `${url.split("?")[0].split("#")[0].split(".").pop()}`.toLowerCase();
     	
     	if (["htm", "html"].indexOf(type) + 1) {
     		const request = new Request("./404.html");
@@ -570,10 +592,10 @@
 			data["resolve"] = {currentCacheKey, updataCacheKey}
 		},
 		getVersionInfos: async (data, client) => {
-			data["resolve"] = {currentVersionInfo, updateVersionInfo}
+			data["resolve"] = {currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo}
 		},
 		refreshVersionInfos: async (data, client) => {
-			return refreshVersionInfos(client).then(() => data["resolve"] = {currentVersionInfo, updateVersionInfo})
+			return refreshVersionInfos(client).then(() => data["resolve"] = {currentCacheKey, updataCacheKey, currentVersionInfo, updateVersionInfo})
 		},
 		checkCache: async (data, client) => {
 			return checkCache(client, ...getArgs(data)).then(rt => data["resolve"] = rt)
@@ -607,6 +629,6 @@
     
     waitCacheReady(currentClient);
     loadUpdateVersionInfo(currentClient);
-    caches.getItem("lastRefreshTime").then(v => lastRefreshTime = (v && v * 1 || 0))
-    caches.getItem("createTime").then(v => v * 1 ? (createTime = v * 1) : (createTime = new Date().getTime(), caches.setItem("createTime", createTime)))
+    localCache.getItem("lastRefreshTime").then(v => lastRefreshTime = (v && v * 1 || 0))
+    localCache.getItem("createTime").then(v => v * 1 ? (createTime = v * 1) : (createTime = new Date().getTime(), localCache.setItem("createTime", createTime)))
 				

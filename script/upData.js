@@ -8,44 +8,43 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.23189";
+    const scriptVersion = "v2024.23200";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
     let checkVersion = isCheckVersion();
     
-    //-------------------------- caches localStorage -----------------------------------
+    //-------------------------- localCache -----------------------------------
     
-    if ("caches" in self) {
-    	caches.setItem = async function(key, value) {
-    		return new Promise(resolve => {
-    			try {
-    				key = key.toString();
-    				value = value.toString();
-    				caches.open("localCache").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
-    			} catch (e) { resolve() }
-    		});
+    window.localCache = function() {
+    	return {
+    		setItem: async function(key, value) {
+    			return new Promise(resolve => {
+    				try {
+    					key = key.toString();
+    					value = value.toString();
+    					caches.open("localCache").then(cache => cache.put(new Request(key), new Response(value))).then(() => resolve(value)).catch(() => resolve());
+    				} catch (e) { resolve() }
+    			});
+    		},
+    		getItem: async function(key) {
+    			return new Promise(resolve => {
+    				try {
+    					key = key.toString();
+    					caches.open("localCache").then(cache => cache.match(new Request(key))).then(response => response.text()).then(value => resolve(value)).catch(() => resolve());
+    				} catch (e) { resolve() }
+    			});
+    		},
+    		removeItem: async function(key) {
+    			return new Promise(resolve => {
+    				try {
+    					key = key.toString();
+    					caches.open("localCache").then(cache => cache.delete(new Request(key))).then(() => resolve(true)).catch(() => resolve(false));
+    				} catch (e) { resolve(false) }
+    			});
+    		}
     	}
-    
-    	caches.getItem = async function(key) {
-    		return new Promise(resolve => {
-    			try {
-    				key = key.toString();
-    				caches.open("localCache").then(cache => cache.match(new Request(key))).then(response => response.text()).then(value => resolve(value)).catch(() => resolve());
-    			} catch (e) { resolve() }
-    		});
-    	}
-    
-    	caches.removeItem = async function(key) {
-    		return new Promise(resolve => {
-    			try {
-    				key = key.toString();
-    				caches.open("localCache").then(cache => cache.delete(new Request(key))).then(() => resolve(true)).catch(() => resolve(false));
-    			} catch (e) { resolve(false) }
-    		});
-    	}
-    
-    }
+    }()
     
     //-------------------------------------------------------------------------------------
     
@@ -207,7 +206,7 @@ window.upData = window.parent.upData || (function() {
     function saveAppVersion(version) {
     	localStorage.removeItem("delayCheckVersion");
     	localStorage.setItem(keyRenjuVersion, version);
-    	try {("caches" in window) && caches.setItem(keyRenjuVersion, version)}catch(e){console.log};
+    	try {("caches" in window) && localCache.setItem(keyRenjuVersion, version)}catch(e){console.log};
     }
     
     async function refreshVersionInfos() {

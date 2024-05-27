@@ -143,7 +143,8 @@
     		if(s <= 0) {
     			clearInterval(timer);
     			timer = null;
-    			window.top.location.href = `index.html?v=${new Date().getTime()}`;
+				const timestamp = "navigator" in self && navigator.serviceWorker && navigator.serviceWorker.controller && ("?v=" + parseInt(new Date().getTime()/1000)) || "";
+    			window.top.location.href = "index.html" + timestamp;
     		}
     	}, 1000);
     }

@@ -1,7 +1,7 @@
 window.serviceWorker = window.parent.serviceWorker || (() => {
     "use strict";
 
-    const DEBUG_SERVER_WORKER = true;
+    const DEBUG_SERVER_WORKER = false;
     const scriptURL = './sw.js';
     let serviceWorker_state;
     
@@ -81,7 +81,6 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     					rm(event.data.resolve)
     				}
     			}
-    			else rm(event.data.resolve)
     		}
     		function rm(rt) {
     			navigator.serviceWorker.removeEventListener("message", onmessage, true);
@@ -90,11 +89,21 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
     		}
     		let timer = null;
     		const time = new Date().getTime();
+    		DEBUG_SERVER_WORKER && console.log(`serviceWorker.js: postMessage ${JSON.stringify(msg)}`)
     		if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    			(typeof msg == "object") && (msg.time = time);
-    			navigator.serviceWorker.addEventListener("message", onmessage, true);
-            	navigator.serviceWorker.controller.postMessage(msg);
-    			setTimeout(() => rm(), timeout);
+    			if (typeof msg == "object") {
+    				msg.time = time;
+    				navigator.serviceWorker.addEventListener("message", onmessage, true);
+            		navigator.serviceWorker.controller.postMessage(msg);
+    				timer = setTimeout(() => {
+    					console.error(`serviceWorker.js: serviceWorker message timeout`);
+    					rm()
+    				}, timeout);
+    			}
+    			else {
+    				navigator.serviceWorker.controller.postMessage(msg);
+    				resolve()
+    			}
     		}
     		else resolve()
     	})
@@ -129,10 +138,12 @@ window.serviceWorker = window.parent.serviceWorker || (() => {
             			})
             		})
             	if (navigator.serviceWorker.controller) {
-            		resolve(navigator.serviceWorker.controller);
+            		console.log(`"${scriptURL}" ......`);
+            		navigator.serviceWorker.ready.then(registration => resolve(registration))
             		return;
             	}
-                // 开始注册service workers
+                /*---开始注册service workers---*/
+                console.log(`registering "${scriptURL}" ......`);
                 navigator.serviceWorker.register(scriptURL, { scope: './', updateViaCache: `all` })
                     .then(registration => {
                     	    

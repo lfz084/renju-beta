@@ -1,5 +1,5 @@
 window.SCRIPT_VERSIONS = [];
-self.SCRIPT_VERSIONS["renju"] = "v2024.23189";
+self.SCRIPT_VERSIONS["renju"] = "v2024.23200";
 window.loadApp = (() => { // 按顺序加载应用
     "use strict";
     window.DEBUG = true;
@@ -67,7 +67,7 @@ window.loadApp = (() => { // 按顺序加载应用
     		DELAY_LARGE: 2,
     		LAST_LARGE: 3
     	}
-    const vconsoleSwitch = false && openVconsoleSwitch.FAST_SMALL || localStorage.getItem("debug");
+    const vconsoleSwitch = true && openVconsoleSwitch.FAST_SMALL || localStorage.getItem("debug");
     
 	window.alert = function(name) { //更改默认标题
         const IFRAME = document.createElement('IFRAME');
@@ -159,7 +159,8 @@ window.loadApp = (() => { // 按顺序加载应用
     })()
 
     window.reloadApp = async function(codeURL) {
-    	const url = window.location.href.split("?")[0].split("#")[0] + `?v=${new Date().getTime()}${codeURL ? "#" + codeURL : ""}`
+    	const timestamp = "navigator" in self && navigator.serviceWorker && navigator.serviceWorker.controller && ("?v=" + parseInt(new Date().getTime()/1000)) || "";
+    	const url = window.location.href.split("?")[0].split("#")[0] + `${timestamp}${codeURL ? "#" + codeURL : ""}`
         window.top.location.href = url;
         return new Promise(resolve => setTimeout(resolve, 30 * 1000));
     }
@@ -266,7 +267,7 @@ window.loadApp = (() => { // 按顺序加载应用
     	}
     	
     	if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-        	mlog("refreshVersionInfos ......");
+        	mlog("upData.refreshVersionInfos ......");
         	await upData.refreshVersionInfos();
     	}
         

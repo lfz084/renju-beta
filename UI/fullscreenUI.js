@@ -58,7 +58,7 @@ window.fullscreenUI = (() => {
 		const [btnRenju, btnDBRead, btnRenjuEditor, btnMakeVCF] = btnBoard.rightButtons;
 		
 		function toURL(url) {
-			return window.location.href.indexOf(url) == -1 ? window.location.href = url : IFRAME.src = url;
+			return (window.location.href.indexOf(url) == -1 && !document.fullscreenElement) ? window.location.href = url : IFRAME.src = url;
 		}
 		
 		btnRenju.setText("R");
