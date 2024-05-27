@@ -104,6 +104,15 @@
     	}
     }()
     
+    async function deleteCache(cacheKey) {
+    	return caches.open(cacheKey)
+    		.then(cache => cache.keys().then(requests => {
+    			const ps = [];
+    			requests.map(request => ps.push(cache.delete(request)));
+    			return Promise.all(ps);
+    		}))
+    }
+    
     //----------------------------------------------------------------------------------------------
     
     function getUrlVersion(version) {
@@ -198,7 +207,7 @@
     async function resetCache(cacheKey, cacheInfo) {
     	const url = formatURL(VERSION_JSON);
     	postMsg({cmd:"log", msg: `reset ${cacheKey} version: ${cacheInfo && cacheInfo.version}`})
-    	return caches.delete(cacheKey)
+    	return deleteCache(cacheKey)
     		.then(() => caches.open(cacheKey))
     		.then(cache => {
     			cacheInfo["status"] = undefined;
@@ -252,7 +261,7 @@
     		.then(() => copyCache(currentCacheKey, updataCacheKey))
     		.then(done => done && checkCache(client, currentCacheKey))
     		.then(done => {
-    			done && caches.delete(updataCacheKey);
+    			done && deleteCache(updataCacheKey);
     			postMsg({cmd: "log", msg: `copyToCurrentCache ${done?"done":"error"}`}, client);
     			waitingCopyToCurrentCache = undefined;
     			return done;

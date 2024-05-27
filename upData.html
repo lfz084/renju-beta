@@ -43,7 +43,12 @@
 				.then(keys => {
 					const ps = [];
 					keys.map(key => {
-						ps.push(caches.delete(key));
+						ps.push(caches.open(key).then(cache => cache.keys().then(requests => {
+								const ps1 = [];
+								requests.map(request => ps1.push(cache.delete(request)));
+								return Promise.all(ps1);
+							})
+						));
 					})
 					return Promise.all(ps);
 				})

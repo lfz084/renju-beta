@@ -258,7 +258,7 @@ try{
         	[SOURCE_FILES["Viewport"]]
     	], false)
     	
-        if (true && window.location.href.indexOf("http://") > -1) {
+        if (false && window.location.href.indexOf("http://") > -1) {
         	mlog("removeServiceWorker ......");
         	await serviceWorker.removeServiceWorker();
         }

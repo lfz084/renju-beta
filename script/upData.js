@@ -301,12 +301,21 @@ window.upData = window.parent.upData || (function() {
     		})
     }
     
+    async function deleteCache(cacheKey) {
+    	return caches.open(cacheKey)
+    		.then(cache => cache.keys().then(requests => {
+    			const ps = [];
+    			requests.map(request => ps.push(cache.delete(request)));
+    			return Promise.all(ps);
+    		}))
+    }
+    
     async function removeAppCache(callback = () => {}, filter = () => true) {
     	if ("caches" in window) {
     		const cacheNames = await caches.keys();
     		cacheNames && cacheNames.map(cacheName => {
     			if (filter(cacheName)) {
-    				caches.delete(cacheName)
+    				deleteCache(cacheName);
     				log(`delete cache: ${cacheName}`, "info");
     				callback(cacheName)
     			}
