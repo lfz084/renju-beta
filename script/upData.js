@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.26006";
+    const scriptVersion = "v2024.26008";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;
@@ -308,6 +308,7 @@ window.upData = window.parent.upData || (function() {
     			requests.map(request => ps.push(cache.delete(request)));
     			return Promise.all(ps);
     		}))
+    		.then(() => caches.delete(cacheKey))
     }
     
     async function removeAppCache(callback = () => {}, filter = () => true) {

@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.26006";
+    const scriptVersion = "v2024.26008";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -111,6 +111,7 @@
     			requests.map(request => ps.push(cache.delete(request)));
     			return Promise.all(ps);
     		}))
+    		.then(() => caches.delete(cacheKey))
     }
     
     //----------------------------------------------------------------------------------------------
