@@ -229,7 +229,9 @@
 	const logDiv = mainUI.newComment({
 		id: "log",
 		type: "div",
-		width: mainUI.cmdWidth - mainUI.cmdPadding * 2,
+		left: mainUI.cmdPadding * 2.5,
+		top: 0,
+		width: mainUI.cmdWidth - mainUI.cmdPadding * 5,
 		height: mainUI.cmdWidth - mainUI.cmdPadding * 2,
 		style: {
 			fontSize: `${mainUI.buttonHeight / 1.8}px`,
@@ -237,7 +239,7 @@
 		},
 		reset: function() { this.viewElem.setAttribute("class", "textarea") }
 	})
-	logDiv.move(mainUI.cmdPadding, mainUI.cmdPadding, undefined, undefined, upDiv);
+	logDiv.move(undefined, undefined, undefined, undefined, upDiv);
     
 	//------------------ load -----------------------------
 	checkLink().then(online => online && logNewVersion())

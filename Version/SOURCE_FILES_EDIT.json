@@ -1,5 +1,5 @@
 {
-	"version": "v2024.26012",
+	"version": "v2024.26019",
 	"files": {
 		"CheckerBoard": "CheckerBoard/CheckerBoard.js",
 		"image2board": "CheckerBoard/image2board.js",
@@ -177,6 +177,8 @@
 		"setThemeMain": "setTheme/main.js",
 		"preloadTheme": "setTheme/preloadTheme.js",
 		"setThemeSources": "setTheme/sources.js",
+		"仿五林主题": "setTheme/json/仿五林主题.json",
+		"仿弈客主题": "setTheme/json/仿弈客主题.json",
 
 		"loaders": "style/loaders.css",
 		"main": "style/main.css",
