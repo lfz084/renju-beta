@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.26019";
+    const scriptVersion = "v2024.27027";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -115,6 +115,10 @@
     }
     
     //----------------------------------------------------------------------------------------------
+   
+    function absoluteURL(url) {
+    	return new Request(url).url;
+    }
     
     function getUrlVersion(version) {
     	return "?v=" + version;
@@ -296,7 +300,7 @@
     					.then(response => {
     						const tempCacheKey =  cacheKey == updataCacheKey ? currentCacheKey : updataCacheKey;
     						const tempVersionInfo = cacheKey == updataCacheKey ? currentVersionInfo : updateVersionInfo;
-    						if (!response.ok && tempVersionInfo && tempVersionInfo["files"] && tempVersionInfo["md5"] && versionInfo["files"][key] == tempVersionInfo["files"][key] && versionInfo["md5"][key] == tempVersionInfo["md5"][key]) {
+    						if (!response.ok && tempVersionInfo && tempVersionInfo["files"] && tempVersionInfo["md5"] && absoluteURL(versionInfo["files"][key]) == absoluteURL(tempVersionInfo["files"][key]) && versionInfo["md5"][key] == tempVersionInfo["md5"][key]) {
     							return loadCache(url, tempCacheKey)
     								.then(response => {
     									if (response.ok) {
