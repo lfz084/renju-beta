@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.27055";
+    const scriptVersion = "v2024.27056";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -752,7 +752,11 @@
 		},
 		*/
 		copyToCurrentCache: async (data, client) => {
-			return this.moveToCurrentCache(data, client);
+			if (waitingCopyCache || waitingMoveCache || waitingCopyToCurrentCache || waitingMoveToCurrentCache) {
+				data["resolve"] = false;
+				postMsg({cmd: "error", msg: "moveToCurrentCache is in progress......"}, client)
+			}
+			else return moveToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
 		},
 		moveToCurrentCache: async (data, client) => {
 			if (waitingCopyCache || waitingMoveCache || waitingCopyToCurrentCache || waitingMoveToCurrentCache) {
