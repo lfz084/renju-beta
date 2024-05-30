@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.27053";
+    const scriptVersion = "v2024.27055";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -280,7 +280,7 @@
     /**
      * 把已经缓存的新版本复制到当前版本缓存中
      */
-    var waitingCopyToCurrentCache
+    var waitingCopyToCurrentCache;
     async function copyToCurrentCache(client) {
     	waitingCopyToCurrentCache = waitingCopyToCurrentCache || Promise.resolve()
     		.then(() => postMsg({ cmd: "log", msg: "copyToCurrentCache start" }, client))
@@ -303,12 +303,12 @@
     /**
      * 把已经缓存的新版本移动到当前版本缓存中
      */
-    var waitingMoveToCurrentCache
+    var waitingMoveToCurrentCache;
     async function moveToCurrentCache(client) {
     	waitingMoveToCurrentCache = waitingMoveToCurrentCache || Promise.resolve()
     		.then(() => postMsg({cmd: "log", msg: "moveToCurrentCache start"}, client))
     		.then(() => moveCache(currentCacheKey, updataCacheKey))
-    		.then(done => done && currentVersionInfo.version != updateVersionInfo.version && (waitingCacheReady = currentVersionInfo = undefined, waitCacheReady(client).then(()=>done)))
+    		.then(done => done && (waitingCacheReady = currentVersionInfo = undefined, waitCacheReady(client).then(()=>done)))
     		.then(done => done && checkCache(client, currentCacheKey))
     		.then(done => {
     			done && deleteCache(updataCacheKey);
