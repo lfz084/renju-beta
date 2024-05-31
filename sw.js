@@ -748,7 +748,7 @@
 				data["resolve"] = false;
 				postMsg({cmd: "error", msg: "copyToCurrentCache is in progress......"}, client)
 			}
-			else return copyToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
+			else return copyToCurrentCache(client).then(rt => data["resolve"] = rt)
 		},
 		*/
 		copyToCurrentCache: async (data, client) => {
@@ -756,14 +756,14 @@
 				data["resolve"] = false;
 				postMsg({cmd: "error", msg: "moveToCurrentCache is in progress......"}, client)
 			}
-			else return moveToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
+			else return moveToCurrentCache(client).then(rt => data["resolve"] = rt)
 		},
 		moveToCurrentCache: async (data, client) => {
 			if (waitingCopyCache || waitingMoveCache || waitingCopyToCurrentCache || waitingMoveToCurrentCache) {
 				data["resolve"] = false;
 				postMsg({cmd: "error", msg: "moveToCurrentCache is in progress......"}, client)
 			}
-			else return moveToCurrentCache(client).then(rt => data["resolve"] = rt).catch(() => data["resolve"] = false)
+			else return moveToCurrentCache(client).then(rt => data["resolve"] = rt)
 		},
 	}
     
@@ -776,6 +776,7 @@
     			.then(() => {
     				syncMsg(data, client)
     			})
+    			.catch(e => postMsg({cmd: "error", msg: e && e.stack || e && e.message || JSON.stringify(e || `sw.js message event cmd "${data.cmd}" : Unknown error`) }))
     	}
     	else {
     		syncMsg(data, client)
