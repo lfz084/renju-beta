@@ -576,7 +576,7 @@
     
     //-------------------- add HTML code -------------------- 
 
-    const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?c17b8a02edb4aff101e8b42ed01aca1b";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
+    const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?bed4a8b88511e0724ea14c479e20c9b5";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
     async function addHTMLCode(response) {
     	if (/^https\:\/\//.test(home) && /\.html$|\.htm$/i.test(response.url.split("?")[0].split("#")[0])) {
     		return response.text()
