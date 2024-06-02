@@ -811,8 +811,8 @@
                 let timer;
                 return function(callback, timeout) {
                     if (timer) clearTimeout(timer);
-                    if (timeout == 0) callback();
-                    else timer = setTimeout(callback, timeout);
+                    if (timeout == 0) try {callback()} catch(e){console.error(e.stack)}
+                    else timer = setTimeout(()=>{try {callback()} catch(e){console.error(e.stack)}}, timeout);
                 }
             }();
         }
@@ -940,7 +940,7 @@
             points[0] = idx;
         }
         this.delay(function() {
-            setTimeout(this.stonechange, 0);
+            this.stonechange();
             this.onMove(idx);
         }.bind(this), timeout);
         return points;
@@ -1856,16 +1856,20 @@
 
     // 跳到第 0 手。
     Board.prototype.toStart = function(isShowNum = this.isShowNum) {
-        while (this.MSindex > -1) {
+        let index = this.MSindex;
+        while (this.MSindex > -1 && index-- > -2) {
             this.toPrevious(isShowNum, 100);
         }
+        index < -1 && console.error(`CheckerBoard.js toStart infinite loop`)
     }
 
     //跳到最后一手
     Board.prototype.toEnd = function(isShowNum = this.isShowNum) {
-        while (this.MSindex < this.MS.length - 1) {
+        let index = this.MSindex;
+        while (this.MSindex < this.MS.length - 1 && index++ < this.MS.length) {
             this.toNext(isShowNum, 100);
         }
+        index >= this.MS.length && console.error(`CheckerBoard.js toEnd infinite loop`)
     }
 
     // 返回上一手
@@ -2076,7 +2080,7 @@
         this.P[idx].text = this.P[idx].type == TYPE_NUMBER ? String(i + 1) : "";
         this.printPoint(idx, showNum);
         this.delay(function() {
-            setTimeout(this.stonechange, 0);
+            this.stonechange();
             this.onMove(idx);
         }.bind(this), timeout);
         return [idx];

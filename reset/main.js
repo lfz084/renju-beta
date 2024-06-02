@@ -154,7 +154,7 @@
     		if(s <= 0) {
     			clearInterval(timer);
     			timer = null;
-				const timestamp = "navigator" in self && navigator.serviceWorker && navigator.serviceWorker.controller && ("?v=" + parseInt(new Date().getTime()/1000)) || "";
+				const timestamp = ("navigator" in self && navigator.serviceWorker && navigator.serviceWorker.controller) ? "" : ("?v=" + new Date().getTime());
     			window.top.location.href = "index.html" + timestamp;
     		}
     	}, 1000);

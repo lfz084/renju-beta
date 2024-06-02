@@ -160,7 +160,7 @@ try{
     })()
 
     window.reloadApp = async function(codeURL) {
-    	const timestamp = "navigator" in self && navigator.serviceWorker && navigator.serviceWorker.controller && ("?v=" + parseInt(new Date().getTime()/1000)) || "";
+    	const timestamp = ("navigator" in self && navigator.serviceWorker && navigator.serviceWorker.controller) ? "" : ("?v=" + new Date().getTime());
     	const url = window.location.href.split("?")[0].split("#")[0] + `${timestamp}${codeURL ? "#" + codeURL : ""}`
         window.top.location.href = url;
         return new Promise(resolve => setTimeout(resolve, 30 * 1000));
