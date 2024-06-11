@@ -528,3 +528,13 @@ fetch("Version/SOURCE_FILES_EDIT.json?cache=onlyNet").then(r=>r.json()).then(inf
 	}catch(e){console.error(e.stack)}
 })
 .catch(e=>console.error(e.stack))
+
+var cBoard = fullscreenUI.contentWindow.cBoard;
+var findVCF = fullscreenUI.contentWindow.findVCF;
+var vcfInfo = fullscreenUI.contentWindow.vcfInfo;
+
+findVCF(cBoard.getArray(), 2, 1, 180, 1000000)
+
+let m = -1;
+vcfInfo.h4.map(v=>v>m&&(m=v))
+m
