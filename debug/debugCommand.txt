@@ -538,3 +538,18 @@ findVCF(cBoard.getArray(), 2, 1, 180, 1000000)
 let m = -1;
 vcfInfo.h4.map(v=>v>m&&(m=v))
 m
+
+console.time()
+const len = 1 << 24;
+let arr = new Uint8Array(len);
+let buf = {
+	u8: arr,
+	get uint8() {return this.u8}
+};
+let buf2 = {
+	buf: buf,
+};
+for(let i=0; i < len; i++){
+	arr[i] = i & 0xFF
+}
+console.timeEnd()

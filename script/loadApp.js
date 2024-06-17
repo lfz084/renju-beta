@@ -44,6 +44,7 @@ try{
         Msg += `caches: ${"caches" in window}\n`;
         Msg += `Worker: ${"Worker" in window}\n`;
         Msg += `serviceWorker: ${"serviceWorker" in navigator}\n`;
+        Msg += `SharedArrayBuffer: ${"SharedArrayBuffer" in window}\n`;
         Msg += `indexedDB: ${"indexedDB" in window}\n`;
         Msg += `msSaveOrOpenBlob in navigator: ${"msSaveOrOpenBlob" in navigator}\n`;
         Msg += `download in HTMLAnchorElement.prototype: ${"download"  in HTMLAnchorElement.prototype}\n`;

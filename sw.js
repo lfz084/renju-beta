@@ -588,6 +588,23 @@
     	else return response;
     }
     
+    // -------------------- support SharedArrayBuffer  -------------------- 
+    
+    async function supportSharedArrayBuffer(response) {
+		if (response.status === 0) {
+            return response;
+        }
+        const newHeaders = new Headers(response.headers);
+        newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+		newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
+
+        return new Response(response.body, {
+    		status: response.status,
+            statusText: response.statusText,
+            headers: newHeaders,
+        })
+    }
+    
     //-------------------- addEventListener -------------------- 
 
     self.addEventListener('install', function(event) {
@@ -630,7 +647,8 @@
     				}[cacheKey];
     				postMsg(`fetch Event url: ${decodeURIComponent(_URL)}`, event.clientId);
     				return waitResponse(_URL, version, event.clientId)
-    					.then(response => addHTMLCode(response));
+    					.then(response => addHTMLCode(response))
+                		.then(response => supportSharedArrayBuffer(response))
     			})
     			.catch(e => {
     				return new Response(e ? JSON.stringify(e && e.stack || e && e.message || e || "sw.js fetch Event: Unknown error", null, 2) : response_err_data, response_404_init_data)

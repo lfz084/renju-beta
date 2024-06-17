@@ -643,6 +643,39 @@ function transTableHas(hashTable, keyLen, keySum, keySum1, moves, position) {
 	return movesHas(hashTable, keyLen, keySum, keySum1, moves, position);
 }
 
+var hashTable = {
+	table: {
+		head: new Uint32Array(0x200000),
+		pages: [new Uint8Array(0x400000)],
+		idxPage: 0,
+		idxBuffer: 1
+	},
+	clear() {
+		this.table.head = new Uint32Array(0x200000);
+		this.table.pages = [new Uint8Array(0x400000)];
+		this.table.idxPage = 0;
+		this.table.idxBuffer = 1;
+	},
+	addPage() {
+		this.table.pages.push(new Uint8Array(0x400000));
+		this.table.idxPage = this.table.pages.length - 1;
+		this.table.idxBuffer = 1;
+	},
+	getBuffer(bytes) {
+		(this.table.idxBuffer + bytes >= 0x400000) && this.addPage();
+		const rt = this.table.idxPage << 24 | this.table.idxBuffer;
+		this.table.idxBuffer += bytes;
+		return rt;
+	},
+	has(keyLen, keySum, keySum1, moves, position) {
+		
+	},
+	set(keyLen, keySum, keySum1, moves, position) {
+		
+	}
+};
+Object.freeze(hashTable);
+
 //--------------------- VCF ------------------------
 
 let vcfHashTable = [],
