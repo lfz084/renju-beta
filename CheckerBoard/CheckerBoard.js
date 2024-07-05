@@ -1008,7 +1008,8 @@
     Board.prototype.clePointB = function(idx, width, height) {
         this.clePoint(idx, true, width, height);
     }
-
+    
+    Board.prototype.checkerCode = checkerCode;
 
     //裁剪指定canvas一块区域的图像，返回包含新图像的canvas;
     Board.prototype.cutToCanvas = function(originCanvas, x, y, width, height) {

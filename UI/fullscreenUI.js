@@ -316,11 +316,13 @@ window.fullscreenUI = (() => {
 			else if (element.msRequestFullscreen) {
 				element.msRequestFullscreen();
 			}
+			window.openNoSleep && window.openNoSleep();
 		}
 
 		function exitFullscreen() {
 			if (!document.fullscreenElement) return;
 			document.exitFullscreen();
+			window.closeNoSleep && window.closeNoSleep();
 		}
 
 		function setFullscreenStyle() {

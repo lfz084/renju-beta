@@ -169,30 +169,27 @@ try{
 
     window.codeURL = window.location.href.split("#").pop().split("?")[0] || "";
 
-    function initNoSleep() { //设置防休眠
-        let noSleep;
+    async function initNoSleep() { //设置防休眠
+    	!("NoSleep" in window) && (await loadScript("NoSleep/NoSleep.min.js"));
+    	let noSleep;
         let isNoSleep = false; // bodyTouchStart 防止锁屏
         let noSleepTime = 0;
         if (self["NoSleep"] && typeof NoSleep == "function") {
             noSleep = new NoSleep();
-            setInterval(function() {
-                if (isNoSleep) {
-                    noSleep.enable();
-                    //log("noSleep.enable()")
-                }
-                else {
-                    noSleep.disable();
-                    //log("noSleep.disable()")
-                }
-            }, 15 * 1000);
         }
         window.openNoSleep = function() {
             if (noSleep) {
                 isNoSleep = true;
+                noSleep.enable();
+                const warn = window.warn || fullscreenUI.contentWindow.warn;
+                warn && setTimeout(()=>warn("🔒保持屏幕长亮", 1800),500);
             }
         };
         window.closeNoSleep = function() {
-            isNoSleep = false;
+            if (noSleep) {
+            	isNoSleep = false;
+        		noSleep.disable();
+            }
         };
     }
 
@@ -203,8 +200,6 @@ try{
     	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && isTopWindow && (await openVconsole());
     	vconsoleSwitch == openVconsoleSwitch.DELAY_LARGE && !fullscreenEnabled && (await window.parent.openVconsole());
 		
-		const cacheKeys = "caches" in self && [...(await caches.keys())] || [];
-		"caches" in self && console.info(`caches: [${cacheKeys}]`);
 		!fullscreenEnabled && console.info(logTestBrowser());
     	
     	window.SOURCE_FILES = window.SOURCE_FILES || (await loadJSON("Version/SOURCE_FILES.json")).files;
@@ -283,14 +278,17 @@ try{
         	mlog(`fullscreenUI.src = ${window.location.href}`, "warn")
         	fullscreenUI.src = window.location.href;
         	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && fullscreenUI.viewport.userScalable();
+        	initNoSleep();
         	return;
+        }
+        else if(isTopWindow) {
+        	initNoSleep();
         }
         
         await loadSources(sources);
         loadAnimation.lock(false);
         loadAnimation.close();
         
-        !fullscreenEnabled && initNoSleep();
         window.jsPDF = window.jspdf && window.jspdf.jsPDF;
          
         const str = upData.logUpDataCompleted();
