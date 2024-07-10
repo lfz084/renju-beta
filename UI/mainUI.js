@@ -578,7 +578,7 @@ window.mainUI = (function() {
 		btnHome.setontouchend(() => toURL("puzzle.html"))
 		btnHome.setIcons(svgPuzzle)
 		
-		btnFullscreen.setClickFunctions([()=>window.openNoSleep && window.openNoSleep(), ()=>window.closeNoSleep && window.closeNoSleep()]);
+		btnFullscreen.setClickFunctions([()=>window.wakeLock.lock(), ()=>window.wakeLock.unlock()]);
 		btnFullscreen.setIcons([svgFullscreen, svgExitFullscreen])
 
 		btnRefresh.setontouchend(() => window.location.reload());

@@ -103,6 +103,29 @@ try{
 		}
 		vConsole = null;
     }
+    
+    window.wakeLock = {
+    	wakeLock: null,
+    	lock: function() {
+    		if ("wakeLock" in navigator && !this.wakeLock) {
+    			navigator.wakeLock.request("screen")
+    				.then(wakeLock => {
+    					this.wakeLock = wakeLock;
+    					window.warn && warn("🔒锁定屏幕唤醒", 1800)
+    				})
+    				.catch(() => window.warn && warn("❌屏幕唤醒失败",1500))
+    		}
+    	},
+    	unlock: function() {
+    		if ("wakeLock" in navigator && this.wakeLock) {
+    			this.wakeLock.release()
+    			 .then(() => {
+    				this.wakeLock = null;
+    				window.warn && warn("🔓解除屏幕唤醒",1500)
+    			 })
+    		}
+    	}
+    };
 
     window.addEventListener("error", function(event) {
     	log(event.message || event, "error");
@@ -169,29 +192,7 @@ try{
 
     window.codeURL = window.location.href.split("#").pop().split("?")[0] || "";
 
-    async function initNoSleep() { //设置防休眠
-    	!("NoSleep" in window) && (await loadScript("NoSleep/NoSleep.min.js"));
-    	let noSleep;
-        let isNoSleep = false; // bodyTouchStart 防止锁屏
-        let noSleepTime = 0;
-        if (self["NoSleep"] && typeof NoSleep == "function") {
-            noSleep = new NoSleep();
-        }
-        window.openNoSleep = function() {
-            if (noSleep) {
-                isNoSleep = true;
-                noSleep.enable();
-                const warn = window.warn || fullscreenUI.contentWindow.warn;
-                warn && setTimeout(()=>warn("🔒保持屏幕长亮", 1800),500);
-            }
-        };
-        window.closeNoSleep = function() {
-            if (noSleep) {
-            	isNoSleep = false;
-        		noSleep.disable();
-            }
-        };
-    }
+    
 
 	document.body.onload = async function load() {
     try {
@@ -278,11 +279,7 @@ try{
         	mlog(`fullscreenUI.src = ${window.location.href}`, "warn")
         	fullscreenUI.src = window.location.href;
         	vconsoleSwitch == openVconsoleSwitch.FAST_SMALL && fullscreenUI.viewport.userScalable();
-        	initNoSleep();
         	return;
-        }
-        else if(isTopWindow) {
-        	initNoSleep();
         }
         
         await loadSources(sources);

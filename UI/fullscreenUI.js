@@ -187,12 +187,14 @@ window.fullscreenUI = (() => {
 					setFullscreenStyle();
 					setRotateButtonStyle();
 					showRotateButtons();
-					rotate = 0
+					rotate = 0;
+					window.wakeLock.lock()
 				}
 				else {
 					exitFullscreenStyle();
 					hideRotateButtons();
 					rotate = 0;
+					window.wakeLock.unlock()
 				}
 			});
 
@@ -316,13 +318,11 @@ window.fullscreenUI = (() => {
 			else if (element.msRequestFullscreen) {
 				element.msRequestFullscreen();
 			}
-			window.openNoSleep && window.openNoSleep();
 		}
 
 		function exitFullscreen() {
 			if (!document.fullscreenElement) return;
 			document.exitFullscreen();
-			window.closeNoSleep && window.closeNoSleep();
 		}
 
 		function setFullscreenStyle() {
