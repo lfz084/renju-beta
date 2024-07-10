@@ -184,17 +184,23 @@ window.fullscreenUI = (() => {
 
 			bodyDiv.addEventListener("fullscreenchange", function(e) {
 				if (document.fullscreenElement) {
-					setFullscreenStyle();
-					setRotateButtonStyle();
-					showRotateButtons();
-					rotate = 0;
 					window.wakeLock.lock()
+					.catch(() => {})
+					.then(() => {
+						setFullscreenStyle();
+						setRotateButtonStyle();
+						showRotateButtons();
+						rotate = 0;
+					})
 				}
 				else {
-					exitFullscreenStyle();
-					hideRotateButtons();
-					rotate = 0;
 					window.wakeLock.unlock()
+					.catch(() => {})
+					.then(() => {
+						exitFullscreenStyle();
+						hideRotateButtons();
+						rotate = 0;
+					})
 				}
 			});
 
