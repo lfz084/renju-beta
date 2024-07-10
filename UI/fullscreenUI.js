@@ -184,23 +184,25 @@ window.fullscreenUI = (() => {
 
 			bodyDiv.addEventListener("fullscreenchange", function(e) {
 				if (document.fullscreenElement) {
-					window.wakeLock.lock()
-					.catch(() => {})
+					Promise.resolve()
 					.then(() => {
 						setFullscreenStyle();
 						setRotateButtonStyle();
 						showRotateButtons();
 						rotate = 0;
 					})
+					.then(() => refreshDOM(fullscreenUI.contentWindow.document.body))
+					.then(() => window.wakeLock.lock())
 				}
 				else {
-					window.wakeLock.unlock()
-					.catch(() => {})
+					Promise.resolve()
 					.then(() => {
 						exitFullscreenStyle();
 						hideRotateButtons();
 						rotate = 0;
 					})
+					.then(() => refreshDOM(fullscreenUI.contentWindow.document.body))
+					.then(() => window.wakeLock.unlock())
 				}
 			});
 
@@ -376,6 +378,16 @@ window.fullscreenUI = (() => {
 
 			btnBoard.leftButtons[1].clickFunctionIndex = 0;
 			btnBoard.leftButtons[1].show();
+		}
+		
+		function refreshDOM(parentNode) {
+			const children = parentNode.children;
+			for (let i = children.length - 1; i >= 0; i--) {
+				children[i].tagName == "DIV" && parentNode.insertBefore(children[i], children[i]);
+			}
+			for (let i = children.length - 1; i >= 0; i--) {
+				refreshDOM(children[i])
+			}
 		}
 
 		const windowResize = (() => {
