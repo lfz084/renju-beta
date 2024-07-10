@@ -108,21 +108,25 @@ try{
     	wakeLock: null,
     	lock: function() {
     		if ("wakeLock" in navigator && !this.wakeLock) {
-    			navigator.wakeLock.request("screen")
+    			setTimeout(() => {
+    				navigator.wakeLock.request("screen")
     				.then(wakeLock => {
     					this.wakeLock = wakeLock;
-    					window.warn && warn("🔒锁定屏幕唤醒", 1800)
+    					(window.warn || fullscreenUI.contentWindow.warn)("🔒锁定屏幕唤醒", 1800)
     				})
-    				.catch(() => window.warn && warn("❌屏幕唤醒失败",1500))
+    				.catch(() => (window.warn || fullscreenUI.contentWindow.warn)("❌屏幕唤醒失败",1500))
+    			}, 1000)
     		}
     	},
     	unlock: function() {
     		if ("wakeLock" in navigator && this.wakeLock) {
-    			this.wakeLock.release()
-    			 .then(() => {
-    				this.wakeLock = null;
-    				window.warn && warn("🔓解除屏幕唤醒",1500)
-    			 })
+    			setTimeout(() => {
+    				this.wakeLock.release()
+    				.then(() => {
+    					this.wakeLock = null;
+    					(window.warn || fullscreenUI.contentWindow.warn)("🔓解除屏幕唤醒",1500)
+    				})
+    			}, 1000)
     		}
     	}
     };
