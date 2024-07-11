@@ -122,7 +122,7 @@ try{
     			return this.wakeLock.release()
     				.then(() => {
     					this.wakeLock = null;
-    					(window.warn || fullscreenUI.contentWindow.warn)("🔓解除屏幕唤醒",1500)
+    					(window.warn || fullscreenUI.contentWindow.warn)("🔑解除屏幕唤醒",1500)
     				})
     		}
     	}
