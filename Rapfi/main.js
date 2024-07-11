@@ -506,7 +506,7 @@
                 }
                 else if (typeof v == "string") log(v);
             });
-            if (ratio < 1) (self.msgbox || alert)(`浏览器内存不足，只打开了${parseInt(ratio*10000)/100}%棋谱\n建议使用最新版chrome浏览器，获得更大内存`);
+            if (ratio < 1) (self.msgbox || alert)(`浏览器内存不足，只打开了${parseInt(ratio*10000)/100}%棋谱\n手机请用Edeg浏览器，获得更大内存`);
             return ratio;
         },
         showBranchNodes: async function() {
