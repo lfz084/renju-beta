@@ -226,10 +226,10 @@
     /**
      * 测试缓存是否完整
      */
-    async function checkCache(client, cacheKey) {
+    async function checkCache(client, cacheKey, files) {
     	let count = 0;
     	const info = cacheKey.indexOf("currentCache")===0 ? currentVersionInfo : updateVersionInfo;
-    	const urls = Object.keys(info.files).map(key => info.files[key]).map(url => formatURL(url)) || [];
+    	const urls = Object.keys(files || info.files).map(key => info.files[key]).map(url => formatURL(url)) || [];
     	cacheKey = cacheKey.indexOf("currentCache")===0 ? currentCacheKey : updataCacheKey;
     	const paramQueue = urls.map(url => [url, cacheKey, client]) || [];
     	return queue((url, cacheKey, client) => loadCache(url, cacheKey, client).then(response => response.ok && count++), paramQueue)
@@ -286,7 +286,7 @@
     		.then(() => postMsg({ cmd: "log", msg: "copyToCurrentCache start" }, client))
     		.then(() => currentVersionInfo.version != updateVersionInfo.version && resetCache(currentCacheKey, updateVersionInfo).then(info => currentVersionInfo = info))
     		.then(() => copyCache(currentCacheKey, updataCacheKey))
-    		.then(done => done && checkCache(client, currentCacheKey))
+    		.then(done => done && checkCache(client, currentCacheKey, updateVersionInfo.files))
     		.then(done => {
     			done && deleteCache(updataCacheKey);
     			postMsg({ cmd: "log", msg: `copyToCurrentCache ${done?"done":"error"}` }, client);
@@ -309,7 +309,7 @@
     		.then(() => postMsg({cmd: "log", msg: "moveToCurrentCache start"}, client))
     		.then(() => moveCache(currentCacheKey, updataCacheKey))
     		.then(done => done && (waitingCacheReady = currentVersionInfo = undefined, waitCacheReady(client).then(()=>done)))
-    		.then(done => done && checkCache(client, currentCacheKey))
+    		.then(done => done && checkCache(client, currentCacheKey, updateVersionInfo.files))
     		.then(done => {
     			done && deleteCache(updataCacheKey);
     			postMsg({cmd: "log", msg: `moveToCurrentCache ${done?"done":"error"}`}, client);
