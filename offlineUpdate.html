@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>五子棋小工具</title>
+	<style>
+		div {
+			font-size: 50px;
+		}
+		button {
+			font-size: 50px;
+			width: 250px;
+			height: 80px;
+		}
+		input {
+			opacity: 0;
+		}
+	</style>
+	<script src="zip/jszip.min.js"></script>
+	<script src="script/serviceWorker.js"></script>
+</head>
+<body>
+	<div>
+		第一步：下载离线更新包 <a href="https://pan.baidu.com/s/1okeYf_6v6jnrGm3vsKkY-g?pwd=5668" target="_blank">百度网盘</a>
+	</div>
+	<div>
+		第二步：打开zip文件<button id="btn">打开文件</button>
+	</div>
+	<div id="log"></div>
+	<input type="file" id="input"/>
+	<script>
+		function log(msg) {
+			document.getElementById("log").innerText = msg;	
+		}
+		
+		function toURL(zipPath) {
+			return new Request(zipPath.slice("updata/".length)).url;
+		}
+		
+		async function getArrBuf(file) {
+			return new Promise(function(resolve, reject) {
+				let fr = new FileReader();
+				fr.onload = function() {
+					resolve(fr.result)
+				};
+				fr.onerror = function() {
+					reject(fr.error)
+				};
+				fr.readAsArrayBuffer(file)
+			});
+		}
+		
+		async function deleteCache(cacheKey) {
+			return caches.open(cacheKey)
+				.then(cache => cache.keys().then(requests => {
+					const ps = [];
+					requests.map(request => ps.push(cache.delete(request)));
+					return Promise.all(ps);
+				}))
+				.then(() => caches.delete(cacheKey))
+		}
+		
+		function getFilePaths(zip) {
+			const paths = [];
+			zip.forEach((path, file) => {
+				if (!file.dir && path.indexOf("updata/") == 0) paths.push(path)
+			})
+			return paths;
+		}
+		
+		const btn = document.getElementById("btn");
+		const input = document.getElementById("input");
+		serviceWorker.registerServiceWorker();
+		btn.addEventListener("click", () => input.click());
+		input.addEventListener("change", () => {
+			if (!('serviceWorker' in navigator) || !(navigator.serviceWorker.controller)) {
+				log("你的浏览器不支持离线缓存");
+				return;
+			}
+			
+			const file = input.files[0];
+			const zip = new JSZip();
+			input.value = "";
+			let cacheKey;
+			let paths = [];
+
+			getArrBuf(file)
+			.then(buf => zip.loadAsync(buf, {checkCRC32: true}))
+			.then(() => serviceWorker.postMessage({ cmd: "getCacheKeys"},  3000))
+			.then(({currentCacheKey}) => {
+				cacheKey = currentCacheKey;
+				return currentCacheKey ? deleteCache(currentCacheKey).then(() => currentCacheKey) : Promise.reject("更新缓存失败");
+			})
+			.then(() => paths = )
+			.then(() => {log(); setTimeout(()=>window.top.location.href="./", 5000)})
+			.catch(e => log(e.message || "更新失败"))
+		})
+	</script>
+</body>
