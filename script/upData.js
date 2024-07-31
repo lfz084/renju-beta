@@ -8,7 +8,7 @@ window.upData = window.parent.upData || (function() {
     }
     
     const keyRenjuVersion = "RENJU_APP_VERSION";
-    const scriptVersion = "v2024.36001";
+    const scriptVersion = "v2024.36002";
 	let currentVersion = localStorage.getItem(keyRenjuVersion) || scriptVersion;
 	
     let updateVersion;

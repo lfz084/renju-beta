@@ -6,15 +6,18 @@
 	<title>五子棋小工具</title>
 	<style>
 		div {
-			font-size: 50px;
+			font-size: 30px;
 		}
 		button {
-			font-size: 50px;
-			width: 250px;
-			height: 80px;
+			font-size: 30px;
+			width: 150px;
+			height: 48px;
 		}
 		input {
 			opacity: 0;
+		}
+		#log {
+		    width: 100%;
 		}
 	</style>
 	<script src="zip/jszip.min.js"></script>
@@ -74,7 +77,7 @@
 		serviceWorker.registerServiceWorker();
 		btn.addEventListener("click", () => input.click());
 		input.addEventListener("change", () => {
-			if (!('serviceWorker' in navigator) || !(navigator.serviceWorker.controller)) {
+			if (!('serviceWorker' in navigator)) {
 				log("你的浏览器不支持离线缓存");
 				return;
 			}
@@ -92,8 +95,25 @@
 				cacheKey = currentCacheKey;
 				return currentCacheKey ? deleteCache(currentCacheKey).then(() => currentCacheKey) : Promise.reject("更新缓存失败");
 			})
-			.then(() => paths = )
-			.then(() => {log(); setTimeout(()=>window.top.location.href="./", 5000)})
+			.then(() => {
+			    paths = getFilePaths(zip);
+			    return new Promise((resolve, reject) => {
+			        async function file2cache() {
+			            const path = paths.shift();
+			            return zip.file(path).async("blob")
+			                .then(b => {
+			                    const request = new Request(toURL(path));
+			                    const response = new Response(b,  {status: 200,statusText: "OK"});
+			                    log(path);
+			                    return caches.open(cacheKey).then(cache => cache.put(request, response.clone()))
+			                })
+			                .then(() => paths.length == 0 ? resolve() : setTimeout(() => file2cache(), 100) )
+			                .catch(reject)
+			        }
+			        file2cache()
+			    })
+			})
+			.then(() => {log("更新结束");setTimeout(()=>window.top.location.href="./", 5000)})
 			.catch(e => log(e.message || "更新失败"))
 		})
 	</script>
