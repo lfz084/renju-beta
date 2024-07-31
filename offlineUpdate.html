@@ -87,9 +87,18 @@
 			input.value = "";
 			let cacheKey;
 			let paths = [];
+			let CONTENT_TYPE;
 
 			getArrBuf(file)
 			.then(buf => zip.loadAsync(buf, {checkCRC32: true}))
+			.then(() => {
+			    return new Promise((resolve, reject) => {
+			        zip.file("CONTENT_TYPE.json").async("string")
+		            .then(str => CONTENT_TYPE = JSON.parse(str))
+		            .then(resolve)
+		            .catch(reject)
+			    })
+			})
 			.then(() => serviceWorker.postMessage({ cmd: "getCacheKeys"},  3000))
 			.then(({currentCacheKey}) => {
 				cacheKey = currentCacheKey;
@@ -103,7 +112,14 @@
 			            return zip.file(path).async("blob")
 			                .then(b => {
 			                    const request = new Request(toURL(path));
-			                    const response = new Response(b,  {status: 200,statusText: "OK"});
+			                    const key = path.split(".").pop();
+			                    const headers = new Headers();
+			                    headers.append("Content-Type", CONTENT_TYPE[key]);
+			                    const response = new Response(b,  {
+			                        status: 200,
+			                        statusText: "OK",
+			                        headers
+			                    });
 			                    log(path);
 			                    return caches.open(cacheKey).then(cache => cache.put(request, response.clone()))
 			                })

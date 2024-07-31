@@ -620,7 +620,5 @@ const files = Object.keys(window.SOURCE_FILES).map(key => window.SOURCE_FILES[ke
 var zip = createUpdata();
 addFiles(files, zip)//.then(() => download(zip, "updata.zip"))
 
-
-
-		第一步：下载离线更新包 <a href="https://pan.baidu.com/s/1okeYf_6v6jnrGm3vsKkY-g?pwd=5668" target="_blank"> 百度网盘 </a>
-	
+const url = "eval/Evaluator.wasm"
+fetch(url).then(r=>r.headers).then(hd =>{for(const p of hd.entries()) console.log(p)})

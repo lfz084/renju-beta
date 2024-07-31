@@ -21,6 +21,12 @@
     <script src="script/saveFile.js"></script>
     <script src="script/loadFile.js"></script>
     <script>
+        const CONTENT_TYPE = {};
+        
+        function addContentType(key, headers) {
+            if (!CONTENT_TYPE[key]) CONTENT_TYPE[key] = headers.get("Content-Type");
+        }
+        
         function log(msg) {
             document.getElementById("log").innerText = msg
         }
@@ -47,7 +53,14 @@
             log(zipPath)
             log(toURL(zipPath))
             return fetch(path)
-                .then(response => response.ok ? response.blob() : Promise.reject())
+                .then(response => {
+                    if(response.ok) {
+                        const key = path.split(".").pop();
+                        addContentType(key, response.headers);
+                        return response.blob()
+                    }
+                    return Promise.reject()
+                })
                 .then(blob => zip.file(zipPath, blob))
                 .catch(() => console.error(`add "${path}" error`))
         }
@@ -71,7 +84,9 @@
                 const SOURCE_FILES = json.files;
                 const files = Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])
                 const zip = createUpdata();
-                return addFiles(files, zip).then(() => download(zip, "updata.zip"))
+                return addFiles(files, zip)
+                    .then(() => zip.file("CONTENT_TYPE.json", JSON.stringify(CONTENT_TYPE, null, 2)))
+                    .then(() => download(zip, "updata.zip"))
             })
             .catch(e => log(e.message))
         }

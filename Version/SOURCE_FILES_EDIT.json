@@ -1,5 +1,5 @@
 {
-  "version": "v2024.36002",
+  "version": "v2024.36003",
   "files": {
     "CheckerBoard": "CheckerBoard/CheckerBoard.js",
     "image2board": "CheckerBoard/image2board.js",
