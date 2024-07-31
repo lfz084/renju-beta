@@ -274,11 +274,10 @@ try{
     	if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         	mlog("upData.refreshVersionInfos ......");
         	await upData.refreshVersionInfos();
-    	}
-    	
-    	if (!fullscreenEnabled) {
-    	    fetch("zip/jszip.min.js")
-    	    fetch("offlineUpdate.html")
+        	if (isTopWindow) {
+        	    fetch("zip/jszip.min.js")
+        	    fetch("offlineUpdate.html")
+        	}
     	}
         
         mlog(`loading ${fullscreenEnabled ? "fullscreenUI" : "mainUI"}......`);

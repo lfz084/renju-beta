@@ -120,12 +120,13 @@
 			                        statusText: "OK",
 			                        headers
 			                    });
-			                    log(path);
+			                    log( ~~((numFiles-paths.length) / numFiles * 100) + "%" + String.fromCharCode(10,13) + path);
 			                    return caches.open(cacheKey).then(cache => cache.put(request, response.clone()))
 			                })
 			                .then(() => paths.length == 0 ? resolve() : setTimeout(() => file2cache(), 100) )
 			                .catch(reject)
 			        }
+			        const numFiles = paths.length;
 			        file2cache()
 			    })
 			})

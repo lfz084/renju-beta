@@ -43,7 +43,7 @@
         function createUpdata() {
             const newLine = String.fromCharCode(10, 13);
             const zip = new JSZip();
-            zip.file("使用说明", `这是五子棋小工具的离线升级包。${newLine}用浏览器打开下面任意一个链接，在网页中打开这个zip文件。${newLine}https://lfz084.github.io/renju/offlineUpdate.html${newLine}https://renju.pages.dev/offlineUpdate.html`);
+            zip.file("使用说明.txt", `这是五子棋小工具的离线升级包。${newLine}用浏览器打开下面任意一个链接，在网页中打开这个zip文件。${newLine}https://lfz084.github.io/renju/offlineUpdate.html${newLine}https://renju.pages.dev/offlineUpdate.html`);
             zip.file("version", "1");
             return zip;
         }
