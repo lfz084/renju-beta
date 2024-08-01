@@ -165,7 +165,7 @@
 	const btnSettkng = [
 		{
 			src: "settings.png",
-			title: "离线更新版本号",
+			title: "从本地更新版本",
 			callback: async function() {
 				window.top.location.href="offlineUpdate.html";
 			}

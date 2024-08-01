@@ -184,7 +184,7 @@ try{
             }, 3 * 1000)
             
             timer2 = setTimeout(() => {
-            	BUT.innerHTML = `<div>你的网络好像不太稳定<br>请多刷新页面加快打开速度<br><a href="${window.location.href}" target="_top">点击刷新</a><br>你还可以点击下面链接打开网站<br><a href="https://lfz084.github.io/" target="_top">主站</a></br><a href="https://renju.pages.dev/" target="_top">镜像站</a></br><a href="https://renjumap.com/renjutool/index.html" target="_top">国内镜像站</a><br><a href="./offlineUpdate.html" target="_top">本地安装</a></div>`;
+            	BUT.innerHTML = `<div>你的网络好像不太好<br>请点击下面任一链接<br><ul><li><a href="${window.location.href}" target="_top">点击刷新</a></li><br><li><a href="https://lfz084.github.io/" target="_top">从主站打开</a></li><br><li><a href="https://renju.pages.dev/" target="_top">从镜像站1打开</a></li><br><li><a href="https://renjumap.com/renjutool/index.html" target="_top">从镜像站2打开</a></li><br><li><a href="./offlineUpdate.html" target="_top">从本地安装</a></li><br></ul></div>`;
             	BUT.setAttribute("class", "refresh")
             }, 15 * 1000)
         }

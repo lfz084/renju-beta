@@ -25,20 +25,58 @@
 </head>
 <body>
 	<div>
-		第一步：下载离线更新包 <a href="https://pan.baidu.com/s/1okeYf_6v6jnrGm3vsKkY-g?pwd=5668" target="_blank">百度网盘</a>
+		第一步：打开网盘下载更新包 <a href="https://pan.baidu.com/s/1okeYf_6v6jnrGm3vsKkY-g?pwd=5668" target="_blank">百度网盘</a>
 	</div>
 	<div>
-		第二步：打开zip文件<button id="btn">打开文件</button>
+		第二步：打开zip文件开始更新<button id="btn">打开文件</button>
 	</div>
 	<div id="log"></div>
 	<input type="file" id="input"/>
 	<script>
+		const version = "1";
+        const versionFileName = "version";
+        const contentTypeFileName = "CONTENT_TYPE.json";
+        const sourceFileJSON = "updata/Version/SOURCE_FILES.json";
+        
 		function log(msg) {
 			document.getElementById("log").innerText = msg;	
 		}
 		
+		function toZipPath(path) {
+		    const home = new Request("./").url;
+		    return decodeURIComponent("updata/" + new Request(path).url.slice(home.length));
+		}
+		
 		function toURL(zipPath) {
 			return new Request(zipPath.slice("updata/".length)).url;
+		}
+		
+		function checkUpdata(zip) {
+		    return Promise.resolve()
+		        .then(() => {
+		            return (!zip.file(versionFileName) || !zip.file(contentTypeFileName) || !zip.file(sourceFileJSON)) && Promise.reject(new Error("更新包缺少文件"))
+		        })
+		        .then(() => {
+		            return new Promise((resolve, reject) => {
+		                zip.file(versionFileName).async("string")
+		                    .then(v => v == version ? resolve() : reject(new Error("更新包版本错误")))
+		            })
+		        })
+		        .then(() => {
+		            return new Promise((resolve, reject) => {
+		                zip.file(sourceFileJSON).async("string")
+		                    .then(str => JSON.parse(str).files)
+		                    .then(files => Object.keys(files).map(key => files[key]))
+		                    .then(resolve)
+		                    .catch(reject)
+		            })
+		        })
+		        .then(files => {
+		            for (let i = 0; i < files.length; i++) {
+		                if (!zip.file(toZipPath(files[i]))) return Promise.reject(new Error("更新包缺少文件"))
+		            }
+		        })
+		        .catch(e => Promise.reject(e && e.message || "更新包验证失败"))
 		}
 		
 		async function getArrBuf(file) {
@@ -75,25 +113,34 @@
 		const btn = document.getElementById("btn");
 		const input = document.getElementById("input");
 		serviceWorker.registerServiceWorker();
-		btn.addEventListener("click", () => input.click());
+		btn.addEventListener("click", () => {
+		    if (!('serviceWorker' in navigator)) {
+		        log("你的浏览器不支持离线缓存");
+		        return;
+		    }
+		    else if (!navigator.serviceWorker.controller) {
+		        alert("serviceWorker 没有工作，需要刷新页面");
+		        window.location.reload();
+		        return;
+		    }
+		    input.click()
+		});
 		input.addEventListener("change", () => {
-			if (!('serviceWorker' in navigator)) {
-				log("你的浏览器不支持离线缓存");
-				return;
-			}
-			
 			const file = input.files[0];
 			const zip = new JSZip();
 			input.value = "";
 			let cacheKey;
 			let paths = [];
 			let CONTENT_TYPE;
-
+			
+            log("开始更新");
 			getArrBuf(file)
 			.then(buf => zip.loadAsync(buf, {checkCRC32: true}))
+			.catch(e => Promise.reject(new Error("打开zip出错：" + String.fromCharCode(10,13) + e.message)))
+			.then(() => checkUpdata(zip))
 			.then(() => {
 			    return new Promise((resolve, reject) => {
-			        zip.file("CONTENT_TYPE.json").async("string")
+			        zip.file(contentTypeFileName).async("string")
 		            .then(str => CONTENT_TYPE = JSON.parse(str))
 		            .then(resolve)
 		            .catch(reject)
@@ -130,8 +177,8 @@
 			        file2cache()
 			    })
 			})
-			.then(() => {log("更新结束");setTimeout(()=>window.top.location.href="./", 5000)})
-			.catch(e => log(e.message || "更新失败"))
+			.then(() => {log("更新结束");setTimeout(()=>window.top.location.href="./", 3000)})
+			.catch(e => log(e && e.message || typeof e!="undefined" && e || "更新失败"))
 		})
 	</script>
 </body>

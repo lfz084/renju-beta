@@ -22,6 +22,13 @@
     <script src="script/loadFile.js"></script>
     <script>
         const CONTENT_TYPE = {};
+        const version = "1";
+        const versionFileName = "version";
+        const contentTypeFileName = "CONTENT_TYPE.json";
+        const updataFileName = "updata.zip";
+        const newLine = String.fromCharCode(10, 13);
+        const instructionsFileName = "使用说明.txt";
+        const instructionsData = `这是五子棋小工具的离线升级包。${newLine}用浏览器打开下面任意一个链接，在网页中打开这个zip文件。${newLine}https://lfz084.github.io/renju/offlineUpdate.html${newLine}https://renju.pages.dev/offlineUpdate.html`;
         
         function addContentType(key, headers) {
             if (!CONTENT_TYPE[key]) CONTENT_TYPE[key] = headers.get("Content-Type");
@@ -41,10 +48,9 @@
         }
 
         function createUpdata() {
-            const newLine = String.fromCharCode(10, 13);
             const zip = new JSZip();
-            zip.file("使用说明.txt", `这是五子棋小工具的离线升级包。${newLine}用浏览器打开下面任意一个链接，在网页中打开这个zip文件。${newLine}https://lfz084.github.io/renju/offlineUpdate.html${newLine}https://renju.pages.dev/offlineUpdate.html`);
-            zip.file("version", "1");
+            zip.file(instructionsFileName, instructionsData);
+            zip.file(versionFileName, version);
             return zip;
         }
 
@@ -72,7 +78,7 @@
         }
 
         async function download(zip, name) {
-            return zip.generateAsync({ type: "blob" }, function updateCallback(metadata) {
+            return zip.generateAsync({ type: "blob",compression: "DEFLATE",compressionOptions: {level: 9} }, function updateCallback(metadata) {
                     log("progression: " + metadata.percent.toFixed(2) + " %");
                 })
                 .then(blob => saveFile.save(blob, name))
@@ -85,8 +91,8 @@
                 const files = Object.keys(SOURCE_FILES).map(key => SOURCE_FILES[key])
                 const zip = createUpdata();
                 return addFiles(files, zip)
-                    .then(() => zip.file("CONTENT_TYPE.json", JSON.stringify(CONTENT_TYPE, null, 2)))
-                    .then(() => download(zip, "updata.zip"))
+                    .then(() => zip.file(contentTypeFileName, JSON.stringify(CONTENT_TYPE, null, 2)))
+                    .then(() => download(zip, updataFileName))
             })
             .catch(e => log(e.message))
         }
