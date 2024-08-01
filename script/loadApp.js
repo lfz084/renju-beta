@@ -184,9 +184,9 @@ try{
             }, 3 * 1000)
             
             timer2 = setTimeout(() => {
-            	BUT.innerHTML = `<div>你的网络好像不太好<br>请点击下面任一链接<br><ul><li><a href="${window.location.href}" target="_top">点击刷新</a></li><br><li><a href="https://lfz084.github.io/" target="_top">从主站打开</a></li><br><li><a href="https://renju.pages.dev/" target="_top">从镜像站1打开</a></li><br><li><a href="https://renjumap.com/renjutool/index.html" target="_top">从镜像站2打开</a></li><br><li><a href="./offlineUpdate.html" target="_top">从本地安装</a></li><br></ul></div>`;
+            	BUT.innerHTML = `<div>你的网络好像不太好<br>请点击下面任一链接<br><br><a href="${window.location.href}" target="_top">点击刷新</a><br><br><a href="https://lfz084.github.io/" target="_top">从主站打开</a><br><br><a href="https://renju.pages.dev/" target="_top">从镜像站1打开</a><br><br><a href="https://renjumap.com/renjutool/index.html" target="_top">从镜像站2打开</a><br><br><a href="./offlineUpdate.html" target="_top">从本地安装</a><br><br></div>`;
             	BUT.setAttribute("class", "refresh")
-            }, 15 * 1000)
+            }, 12 * 1000)
         }
     })()
 
@@ -198,8 +198,6 @@ try{
     }
 
     window.codeURL = (window.location.href.split("#")[1] || "").split("?")[0] || "";
-
-    
 
 	document.body.onload = async function load() {
     try {
