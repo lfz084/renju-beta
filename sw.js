@@ -581,7 +581,7 @@
     	if (/^https\:\/\//i.test(url) && /\.html$|\.htm$/i.test(url.split("?")[0].split("#")[0])) {
     		return response.text()
     			.then(html => {
-    				return html.indexOf(tongjihtmlScript) + 1 ? html : html.replace(new RegExp("\<body\>", "i"), `<body>\n` + tongjihtmlScript)
+    				return html.indexOf("https://hm.baidu.com/hm.js") + 1 ? html : html.replace(new RegExp("\<body\>", "i"), `<body>\n` + tongjihtmlScript)
     			})
     			.then(html => new Response(html, response_200_init_html))
     	}
