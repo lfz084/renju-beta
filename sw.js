@@ -624,14 +624,16 @@
     		const responsePromise = waitCacheReady(event.clientId)
     			.then(() => tryUpdate(event.clientId))
     			.then(() => {
-    			    /*
-    				const url = event.request.url.split("?")[0].split("#")[0];
-					if (url.split("/").pop().indexOf(".") == -1 && url.slice(-1) != "/") {
-						const html = `<html><head></head><body><script>location.href="${formatURL(event.request.url)}"</script></body></html>`;
+    			    const _URL = formatURL(event.request.url);
+    				
+    				/*------------- 统一小工具链接格式 -----------------------*/
+    				if (/\.html$|\.htm$/i.test(_URL) && ( /\?v\=[\d]+/i.test(event.request.url) || _URL != event.request.url.split("?")[0].split("#")[0])) {
+                        const codeURL = (event.request.url.split("#")[1] || "").split("?")[0] || "";
+						const html = `<html><head></head><body><script>location.href="${_URL + (codeURL ? "#" + codeURL : "")}"</script></body></html>`;
 						return new Response(html, response_200_init_html)
-					}
-					*/
-    				const _URL = formatURL(event.request.url);
+    				}
+    			    /*-----------------------------------------------------*/
+    				
     				const execStore = /\?cache\=onlyNet|\?cache\=onlyCache|\?cache\=netFirst|\?cache\=cacheFirst/.exec(event.request.url);
     				const storeKey = null == execStore ? "default" : execStore[0];
     				const waitResponse = {
