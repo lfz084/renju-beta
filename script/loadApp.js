@@ -212,6 +212,11 @@ try{
     	window.SOURCE_FILES = window.SOURCE_FILES || (await loadJSON("Version/SOURCE_FILES.json")).files;
         window.UPDATA_INFO = await loadJSON("Version/UPDATA_INFO.json");
 		
+		if (!localStorage.getItem("checkInPrivate")) {
+		    localStorage.setItem("checkInPrivate", true);
+		    loadScript("script/detectIncognito.min.js");
+		}
+		
 		const sources = window.appSources;
 		const uiSources = fullscreenEnabled && 
 			[{
