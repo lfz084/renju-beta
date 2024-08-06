@@ -1,5 +1,5 @@
     const DEBUG_SERVER_WORKER = false;
-    const scriptVersion = "v2024.37002";
+    const scriptVersion = "v2024.37003";
     const home = new Request("./").url;
     const beta = /renju\-beta$|renju\-beta\/$/.test(home) && "Beta" || "";
     const VERSION_JSON = new Request("./Version/SOURCE_FILES.json").url;
@@ -578,7 +578,7 @@
 
     const tongjihtmlScript = '  <script>\n    var _hmt = _hmt || [];\n    (function(){\n      var hm = document.createElement("script");\n      hm.src = "https://hm.baidu.com/hm.js?bed4a8b88511e0724ea14c479e20c9b5";\n      var s = document.getElementsByTagName("script")[0];\n      s.parentNode.insertBefore(hm,s)\n    })();\n  </script>'
     async function addHTMLCode(response, url = response.url) {
-    	if (/^https\:\/\//i.test(url) && /\.html$|\.htm$/i.test(url.split("?")[0].split("#")[0])) {
+    	if (response.ok && /^https\:\/\//i.test(url) && /\.html$|\.htm$/i.test(url.split("?")[0].split("#")[0])) {
     		return response.text()
     			.then(html => {
     				return html.indexOf("https://hm.baidu.com/hm.js") + 1 ? html : html.replace(new RegExp("\<body\>", "i"), `<body>\n` + tongjihtmlScript)
@@ -651,7 +651,7 @@
                 		.then(response => supportSharedArrayBuffer(response))
                 		.then(response => {
                 		    /*------------- 统一小工具链接格式 -----------------------*/
-                		    if (true && /\.html$/.test(_URL) && (/\?v\=[\d]+/i.test(event.request.url) || /\.html$/.test(event.request.url.split("?")[0].split("#")[0]))) {
+                		    if (response.ok && /\.html$/.test(_URL) && (/\?v\=[\d]+/i.test(event.request.url) || /\.html$/.test(event.request.url.split("?")[0].split("#")[0]))) {
                 		        const codeURL = (event.request.url.split("#")[1] || "").split("?")[0] || "";
                 		        return Response.redirect(_URL.replace(/index\.html$|\.html$/, "") + (codeURL ? "#" + codeURL : ""))
                 		        //const html = `<html><head></head><body><script>location.href="${_URL.replace(/\.html$/, "") + (codeURL ? "#" + codeURL : "")}"</script></body></html>`;
