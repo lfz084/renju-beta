@@ -212,9 +212,23 @@ try{
     	window.SOURCE_FILES = window.SOURCE_FILES || (await loadJSON("Version/SOURCE_FILES.json")).files;
         window.UPDATA_INFO = await loadJSON("Version/UPDATA_INFO.json");
 		
-		if (!localStorage.getItem("checkInPrivate")) {
-		    localStorage.setItem("checkInPrivate", true);
-		    loadScript("script/detectIncognito.min.js");
+		if (localStorage.getItem("IsPrivate") === null) {
+		    loadScript("script/detectIncognito.min.js")
+		        .then(() => {
+		            detectIncognito()
+		                .then(function(result) {
+		                    localStorage.setItem("IsPrivate", !!result.isPrivate);
+		                    if (result.isPrivate) alert(`检测到你在用无痕模式访问网站。\n关闭浏览器后"离线缓存"和"网站设置"等数据会丢失。`)
+		                })
+		                .catch(() => {localStorage.setItem("IsPrivate", false)})
+		                .then(() => {
+		                    if ("document" in self) {
+		                        for (const st of document.scripts) {
+		                            /detectIncognito\.min\.js/.test(st.src) && st.remove()
+		                        }
+		                    }
+		                })
+		        })
 		}
 		
 		const sources = window.appSources;
