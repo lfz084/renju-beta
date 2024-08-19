@@ -2,7 +2,7 @@
 
 下面三个链接都使用同一个GitHub仓库，你可以根据自己的网络选择最快的链接
 
-<https://renjutool.asia/>
+<https://www.renjutool.asia/>
 
 <https://renju.pages.dev/>
 
