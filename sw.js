@@ -457,6 +457,7 @@
 	
 	const renjuWebsites = [
 		    "https://www.renjutool.asia/",
+		    "https://renju.renjutool.asia/",
 		    "https://renju.pages.dev/",
 		    "https://lfz084.github.io/renju/"
 		];
@@ -465,7 +466,7 @@
 		    "https://renju-beta.pages.dev/",
 		    "https://lfz084.github.io/renju-beta/"
 		];
-	const renjuRegExp = /^https\:\/\/renjutool\.asia\/|^https\:\/\/www\.renjutool\.asia\/|^https\:\/\/renju\.pages\.dev\/|^https\:\/\/lfz084\.github\.io\/renju\//;
+	const renjuRegExp = /^https\:\/\/www\.renjutool\.asia\/|^https\:\/\/renju\.renjutool\.asia\/|^https\:\/\/renju\.pages\.dev\/|^https\:\/\/lfz084\.github\.io\/renju\//;
 	const renjubetaRegExp = /^https\:\/\/renju\-beta\.renjutool\.asia\/|^https\:\/\/renju\-beta\.pages\.dev\/|^https\:\/\/lfz084\.github\.io\/renju\-beta\//;
 	
 	/**
@@ -473,16 +474,21 @@
 	 */
 	function myFetch(request) {
 	    let websites;
+	    let site;
 	    let exp;
 	    renjuRegExp.test(request.url) ? (websites = renjuWebsites, exp = renjuRegExp) : renjubetaRegExp.test(request.url) ? (websites = renjubetaWebsites, exp = renjubetaRegExp) : 1;
 	    if (websites) return new Promise((resolve, reject) => {
 	        function getRespones() {
-	            const nRequest = new Request(request.url.replace(exp, websites[index++]), requestInit);
+	            site = websites[0];
+	            const nRequest = new Request(request.url.replace(exp, site), requestInit);
     	        fetch(nRequest)
-    	            .then(response => response.ok ? resolve(response) : Promise.reject(response))
-    	            .catch(response => index < websites.length ? setTimeout(()=>getRespones(), 0): reject(response))
+    	            .then(response => resolve(response))
+    	            .catch(e => {
+    	                site == websites[0] && websites.push(websites.shift());
+    	                count++ < 3 ? setTimeout(()=>getRespones(), 0): reject(e);
+    	            })
 	        }
-	        let index = 0;
+	        let count = 0;
 	        getRespones();
 	    })
 	    else return fetch(request)
