@@ -56,6 +56,7 @@
     			countRequests == 1 && syncMsg(`loading......`, client);
     		},
     		finish: (url, client) => {
+    			!url && (countRequests=0);
     			countRequests && countRequests--;
     			countRequests == 0 && syncMsg(`load finish`, client);
     		}
@@ -714,7 +715,7 @@
 	let log2cacheTimer = setInterval(() => {
 		if (5000 < new Date().getTime() - lastDelayMessages) {
 			/*预防 serviceWorker 意外重启，关闭加载动画*/
-			load.finish(url, currentClient);
+			load.finish(null, currentClient);
 			tryUpdate(currentClient);
 			/*------------------------------------*/
 			clearInterval(log2cacheTimer);
