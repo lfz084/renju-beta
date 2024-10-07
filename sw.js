@@ -478,7 +478,7 @@
 	    let site;
 	    let exp;
 	    renjuRegExp.test(request.url) ? (websites = renjuWebsites, exp = renjuRegExp) : renjubetaRegExp.test(request.url) ? (websites = renjubetaWebsites, exp = renjubetaRegExp) : 1;
-	    if (websites) return new Promise((resolve, reject) => {
+	    if (falss && websites) return new Promise((resolve, reject) => {
 	        function getRespones() {
 	            site = websites[0];
 	            const nRequest = new Request(request.url.replace(exp, site), requestInit);
