@@ -243,8 +243,8 @@ window.control = (() => {
 				text: "输出代码",
 				touchend: function() {
 					if (isBusy()) return;
-					let code = cBoard.getCode();
-					code = code == "\n{}{}" ? "空棋盘没有棋盘代码" : code;
+					let code = cBoard.outputCode();
+					code = code == "{}{}" ? "空棋盘没有棋盘代码" : code;
 					inputCode(`${code}\n\n\n---------------------分割线-----------------------\n长按上面代码，复制棋谱代`);
 				}
 	        },
@@ -1480,7 +1480,7 @@ window.control = (() => {
 		async function inputCode(initStr = "") {
 			const inputStr = await inputText(initStr, 10, "输入代码");
 			const type = (playMode == MODE_READLIB || playMode == MODE_EDITLIB) ? TYPE_NUMBER : undefined;
-			checkCommand(inputStr) || cBoard.unpackCode(inputStr, type, getShowNum());
+			checkCommand(inputStr) || cBoard.inputCode(inputStr, "iwzq", type, getShowNum());
 		}
 		
 		function shareURL() {

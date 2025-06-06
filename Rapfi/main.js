@@ -461,7 +461,7 @@
         },
         downloadFile: async function(url) {
             try {
-                const response = await fetch(url + "?cache=onlyNet");
+                const response = await fetch(url + "?cache=netFirst");
                 const blob = await response.blob();
                 const file = new File([blob], getFileName(url));
                 await this.openFile(file);
