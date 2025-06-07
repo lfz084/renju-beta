@@ -17,6 +17,7 @@
                 [SOURCE_FILES["saveFile"]],
                 [SOURCE_FILES["svg"]],
                 [SOURCE_FILES["tree"]],
+                [SOURCE_FILES["codeboard"]],
                 [SOURCE_FILES["share"]],
                 [SOURCE_FILES["exWindow"]],
                 [SOURCE_FILES["editButtons"]],
