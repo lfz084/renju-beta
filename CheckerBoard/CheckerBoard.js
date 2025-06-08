@@ -1109,8 +1109,8 @@
         let code = this.getCodeType(TYPE_NUMBER);
         code += "{" + this.getCodeType(TYPE_BLACK) + "}";
         code += "{" + this.getCodeType(TYPE_WHITE) + "}";
-        const arr = /[a-z0-9]*(?=\{\}\{\})|[a-z0-9]*\{[a-z0-9]+\}(?=\{\})/i.exec(code);
-        return arr && arr[0] || code;
+        code = code.replace(/\{\}\{\}$|\{\}$/,"");
+        return code;
     }
 
 
