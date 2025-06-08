@@ -444,7 +444,7 @@
         },
         outputCode: function() {
             const code = cBoard.getCode().split(/{}/).join("");
-            inputText(code);
+            codeboard.open(code).then(str => cBoard.unpackCode(str));
         },
         scaleBoard: function() {
             const scale = cBoard.scale != 1 ? 1 : 1.5;
