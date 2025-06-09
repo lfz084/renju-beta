@@ -596,7 +596,7 @@
             const x = pointCode[0].slice(0,1);
             const y = pointCode[0].slice(1);
             renju2002Code += (x.charCodeAt() - "A".charCodeAt() + 1).toString(16);
-            renju2002Code += (y * 1).toString(16);
+            renju2002Code += (16 - y * 1).toString(16);
         }
         return renju2002Code;
     }
@@ -614,7 +614,7 @@
             const x = pointCode[0].slice(0,1);
             const y = pointCode[0].slice(1);
             iwzqCode += String.fromCharCode(parseInt(x, 16) -1 + "A".charCodeAt());
-            iwzqCode += parseInt(y, 16);
+            iwzqCode += 16 - parseInt(y, 16);
         }
         return iwzqCode;
     }
