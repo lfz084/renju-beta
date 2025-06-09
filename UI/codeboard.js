@@ -89,10 +89,11 @@ window.codeboard = (() => {
                 text: "iwzq",
                 options: [
 					0, "iwzq",
-					1, "renju2002"
+					1, "renju2002",
+					2, "renjutool"
 				],
                 change: function() {
-                    const codeTypeArr = ["iwzq", "renju2002"];
+                    const codeTypeArr = ["iwzq", "renju2002", "renjutool"];
                     strCodeType = codeTypeArr[this.input.value];
                     setTimeout(() => this.bindButton.setText(this.text), 100);
                     code && outputCode(strCodeType)
@@ -325,11 +326,11 @@ window.codeboard = (() => {
         function inputCode() {
             cBoard.inputCode(textarea.value, strCodeType);
             actions();
-            code = cBoard.getCode();
+            code = cBoard.getCodeURL();
         }
         
         function outputCode() {
-            cBoard.unpackCode(code);
+            cBoard.unpackCodeURL(code);
             actions();
             textarea.value = cBoard.outputCode(strCodeType);
         }
@@ -365,11 +366,12 @@ window.codeboard = (() => {
 
         const codeboard = {
             resolve: ()=>{},
-            open: async function(codeStr = "") {
+            open: async function(codeStr = "", boardSize = 15) {
                 return new Promise(resolve => {
                     this.resolve = resolve;
                     open(codeStr);
                     code = codeStr;
+                    cBoard.setSize(boardSize);
                     code && outputCode()
                 })
             },
