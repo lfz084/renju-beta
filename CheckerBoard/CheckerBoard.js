@@ -894,10 +894,11 @@
 
     //移动棋盘， row，col 偏移的行数，列数
     Board.prototype.translate = function(row, col) {
-        if (isBoardMoveOut.call(this, row, col)) return;
+        if (isBoardMoveOut.call(this, row, col)) return false;
         translate_MS.call(this, row, col);
         translate_P.call(this, row, col);
         this.refreshCheckerBoard();
+        return true;
     }
     
     Board.prototype.rotateMoves90 = function(moves) {
