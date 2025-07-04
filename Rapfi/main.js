@@ -12,7 +12,7 @@
         },
         {
             url:    "Rapfi/db/九天指南v3-1.db",
-            title:  "九天指南v3-1.db<br>乱码把 gbk 改成 utf-8"
+            title:  "九天指南v3-1.db"
         },
         {
             href:    "https://docs.qq.com/sheet/DTU1OVHhiRmVIZUpo?u=ea171504572d453588a256e452c1876a",
@@ -189,11 +189,11 @@
         {
             varName: "btnEncoding",
             type: "select",
-            text: "gbk",
-            options: [0, "gbk", 1, "big5", 2, "utf-8"],
+            text: "auto",
+            options: [0, "auto", 1, "gbk", 2, "big5", 3, "utf-8"],
             change: function() {
-                const encoding = ["gbk", "big5", "utf-8"];
-                textDecoder = new TextDecoder(encoding[this.input.value]);
+                const encoding = ["auto", "gbk", "big5", "utf-8"];
+                textDecoder = ENUM_TEXT_DECODERS[encoding[this.input.value]];
                 game.showBranchNodes();
             }
         },
@@ -337,9 +337,81 @@
     }
 
     //------------------------ 
-
-    let textDecoder = new TextDecoder("gbk");
+	
+	const ENUM_TEXT_DECODERS = {
+		"gbk": new TextDecoder("gbk"),
+		"utf-8": new TextDecoder("utf-8"),
+		"big5": new TextDecoder("big5")
+	}
+    let textDecoder = undefined;
     let output = "";
+    
+    /*--------------- utf-8 编码范围 -------------------
+             char[1]	char[2]	    char[3]	  char[4]
+    1byte    0X00~0x7F
+    2byte    0x81~0xFE, 0x40~0xFE
+    3byte    0x81~0x84, 0x30~0x39, 0x81~0xFE, 0x30~0x39
+    4byte    0x95~0x9A, 0x30~0x39, 0x81~0xFE, 0x30~0x39
+    ---------------------------------------------------*/
+    function is_utf8(uint8) {
+    	let i = 0;
+    	const len = uint8.length;
+    	while (i < len) {
+    		if ( uint8[i] < 0x80) {
+    			i++;
+    		}
+    		else if ((uint8[i] & 0xE0) == 0xC0) {
+    			if ((uint8[i + 1] & 0xC0) != 0x80) return 0;
+    			i += 2;
+    		}
+    		else if ((uint8[i] & 0xF0) == 0xE0) {
+    			if ((uint8[i + 1] & 0xC0) != 0x80 || (uint8[i + 2] & 0xC0) != 0x80) return 0;
+    			i += 3;
+    		}
+    		else if (( uint8[i] & 0xF8) == 0xF0) {
+    			if ((uint8[ i + 1] & 0xC0) != 0x80 || (uint8[i + 2] & 0xC0) != 0x80 || (uint8[i + 3] & 0xC0) != 0x80) return 0;
+    			i += 4;
+    		} else {
+    			return 0;
+    		}
+    	}
+    	return 1;
+    }
+    /*------------- GB+18030 2022 编码范围 ----------------
+             char[1]	char[2]	    char[3]	  char[4]
+    1byte    0X00~0x7F
+    2byte    0x81~0xFE, 0x40~0xFE
+    4byte    0x81~0x84, 0x30~0x39, 0x81~0xFE, 0x30~0x39
+    4byte    0x95~0x9A, 0x30~0x39, 0x81~0xFE, 0x30~0x39
+    ---------------------------------------------------*/
+    function is_gbk(uint8) {
+    	let i = 0;
+    	const len = uint8.length;
+    	while ( i < len ) {
+    		if (uint8[i] < 0x80) {
+    			i++;
+    		} 
+    		else if (uint8[i] >= 0x81 && uint8[i] <= 0xFE) {
+    			if (uint8[i + 1] > 0xFE) return 0;
+    			else if (uint8[i + 1] < 0x40) {
+    				if (uint8[i + 1] >= 0x30 && uint8[i + 1] <= 0x39 && uint8[i + 3] >= 0x30 && uint8[i + 3] <= 0x39) {
+    					i+=4;
+    				}
+    				else return 0;
+    			}
+    			i += 2;
+    		}
+    		else {
+    			return 0;
+    		}
+    	}
+    	return 1;
+    }
+    
+    function autoDecoder(uint8) {
+    	let key = is_gbk(uint8) ? "gbk" : is_utf8(uint8) ? "utf-8" : "big5";
+    	return ENUM_TEXT_DECODERS[key];
+    }
 
     function Uint16ToInt16(value) {
         return value & 0x8000 ? value - 0x10000: value;
@@ -535,7 +607,8 @@
                 //alert(info.comment)
                 if (!isEqual(info.position, cBoard.getArray())) return;
                 if (info.comment) {
-                    const text = textDecoder.decode(info.comment);
+                	const _textDecoder = textDecoder || autoDecoder(info.comment) || ENUM_TEXT_DECODERS["gbk"];
+                    const text = _textDecoder.decode(info.comment);
                     $("comment").innerHTML = text || DBREAD_HELP;
                 }
                 else $("comment").innerHTML = DBREAD_HELP;
