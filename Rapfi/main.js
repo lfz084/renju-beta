@@ -23,7 +23,7 @@
     
     let linkString = "";
     for(let i = 0; i < links.length; i++) {
-    	if (links[i].url) linkString += `<a onclick='window.game.downloadFile("${links[i].url}")'>${links[i].title}</a><br>`;
+    	if (links[i].url) linkString += `<a onclick='window.game.downloadFile("${links[i].url}?cache=netFirst")'>${links[i].title}</a><br>`;
     	if (links[i].href) linkString += `<a href="${links[i].href}" target="${links[i].target}">${links[i].title}</a><br>`;
     }
 
@@ -457,10 +457,15 @@
             sLabel = `${"  ".slice(0,2 - winRateLabel.length)}${winRateLabel}%`;
         }
         else {
-            sLabel = [EMOJI_ROUND_BLACK, EMOJI_ROUND][game.sideToMove];
+        	sLabel = [EMOJI_ROUND_BLACK, EMOJI_ROUND][game.sideToMove];
         }
-        output += `${sLabel}: ${label}, ${value}, ${record.depth}, ${record.bound}\n`
+        //output += `${sLabel}: ${label}, ${value}, ${record.depth}, ${record.bound}\n`
         return sLabel.toLocaleUpperCase();
+    }
+    
+    const BOARDTEXT_HEARD = "@BTXT@";
+    function hasBoardText(uint8) {
+    	return uint8.length > BOARDTEXT_HEARD.length && uint8[0] == 64 && uint8[1] == 66 && uint8[2] == 84 && uint8[3] == 88 && uint8[4] == 84 && uint8[5] == 64
     }
 
     async function inputText(initStr = "") {
@@ -597,6 +602,13 @@
         },
         showBranchNodes: async function() {
             if (this.mode == this.MODE.DATABASS) {
+            	const position = cBoard.getArray();
+                function createKey(idx) {
+        			const _position = position.slice(0);
+                    _position[idx] = game.sideToMove + 1;
+                    return JSON.stringify(constructDBKey(game.rule, game.boardWidth, game.boardHeight, game.sideToMove, _position));
+                }
+                
                 const info = await DBClient.getBranchNodes({
                     rule: game.rule,
                     boardWidth: game.boardWidth,
@@ -604,27 +616,55 @@
                     sideToMove: game.sideToMove,
                     position: cBoard.getArray()
                 });
-                //alert(info.comment)
+                
                 if (!isEqual(info.position, cBoard.getArray())) return;
+                
+                let boardTextMap;
                 if (info.comment) {
                 	const _textDecoder = textDecoder || autoDecoder(info.comment) || ENUM_TEXT_DECODERS["gbk"];
                     const text = _textDecoder.decode(info.comment);
-                    $("comment").innerHTML = text || DBREAD_HELP;
+                    if (hasBoardText(info.comment)) {
+                    	const end = Math.min(0xFFFFFFFF & text.lastIndexOf("\b"), text.length);
+                    	boardTextMap = {};
+                    	text.slice(BOARDTEXT_HEARD.length, end)
+                    		.replaceAll("\0", "")
+                    		.split("\n")
+                    		.map(text => {
+                    			const y = parseInt(text.slice(0, 1), 25);
+                    			const x = parseInt(text.slice(1, 2), 25);
+                    			const idx = y * 15 + x;
+                    			const key = createKey(idx);
+                    			//console.log(`${idx}\n${key} ${text.slice(2)}`)
+                    			boardTextMap[key] = text.slice(2);
+                    		})
+                    	$("comment").innerHTML = text.slice(end) || DBREAD_HELP;
+                    }
+                    else {
+                    	$("comment").innerHTML = text || DBREAD_HELP;
+                    }
                 }
                 else $("comment").innerHTML = DBREAD_HELP;
+                
+                //output = "";
                 cBoard.cleLb("all");
-                output = "";
-                //alert(info.records);
+                //boardTextMap && console.log(JSON.stringify(boardTextMap, null, 2))
+                boardTextMap ?
                 info.records.map(record => {
-                    const label = readLabel(record.buffer);
-                    cBoard.wLb(record.idx, label, "black");
+                	const key = createKey(record.idx);
+                    //console.log(`___${record.idx}\n${key}`)
+                	cBoard.wLb(record.idx, boardTextMap[key] || readLabel(record.buffer), "black");
+                }) :
+                info.records.map(record => {
+                	const label = readLabel(record.buffer);
+                	cBoard.wLb(record.idx, label, "black");
                 })
-                game.rule == Rule.RENJU && game.sideToMove == 0 && info.position.map((v,i) => {
-                    if (v == 0 && ("isFoul" in self) && isFoul(i, info.position)) {
-                        cBoard.wLb(i, EMOJI_FOUL, "red");
-                    }
+                game.rule == Rule.RENJU && game.sideToMove == 0 && info.position.map((v, i) => {
+                	if (v == 0 && ("isFoul" in self) && isFoul(i, info.position)) {
+                		cBoard.wLb(i, EMOJI_FOUL, "red");
+                	}
                 })
                 //inputText(output);
+                
                 return info;
             }
         },
