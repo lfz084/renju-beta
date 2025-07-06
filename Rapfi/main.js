@@ -408,8 +408,12 @@
     	return 1;
     }
     
+    function getEncodeLabel(uint8) {
+    	return is_gbk(uint8) ? "gbk" : is_utf8(uint8) ? "utf-8" : "big5";
+    }
+    
     function autoDecoder(uint8) {
-    	let key = is_gbk(uint8) ? "gbk" : is_utf8(uint8) ? "utf-8" : "big5";
+    	let key = getEncodeLabel(uint8);
     	return ENUM_TEXT_DECODERS[key];
     }
 
@@ -467,6 +471,104 @@
     function hasBoardText(uint8) {
     	return uint8.length > BOARDTEXT_HEARD.length && uint8[0] == 64 && uint8[1] == 66 && uint8[2] == 84 && uint8[3] == 88 && uint8[4] == 84 && uint8[5] == 64
     }
+    
+    // read boardText string, remove boardText string, create new info.comment, 
+    // create boardTextMap, add info.boardTextMap, 
+    function readBoardText(info, textDecode) {
+    	function lastIndex(uint8, char) {
+    		const charCode = char.charCodeAt(0) & 0xFF;
+    		let idx = -1;
+    		for (let i = 0; i < uint8.length; i++) uint8[i] === charCode && (idx = i)
+    		return idx;
+    	}
+    	
+    	const end = Math.min(0xFFFFFFF & lastIndex(info.comment, "\b"), info.comment.length);
+        const boardTextBuffer = new Uint8Array(info.comment.buffer, BOARDTEXT_HEARD.length, end - BOARDTEXT_HEARD.length);
+                    	
+        let cur = 0;
+        const boardTextObjArr = []
+        while(cur < boardTextBuffer.length) {
+        	// const buffer = []
+            const labelBuffer = [];
+            const x = parseInt(String.fromCharCode(boardTextBuffer[cur++]), 25);
+            // buffer.push(boardTextBuffer[cur])
+            const y = parseInt(String.fromCharCode(boardTextBuffer[cur++]), 25);
+            // buffer.push(boardTextBuffer[cur])
+                    		
+            while(cur < boardTextBuffer.length &&
+            	boardTextBuffer[cur] != 0 &&
+                boardTextBuffer[cur] != 10)
+            {
+            	labelBuffer.push(boardTextBuffer[cur++])
+                // buffer.push(boardTextBuffer[cur])
+            }
+            // skip \0 \n
+            while(cur < boardTextBuffer.length &&
+            	(boardTextBuffer[cur] == 0 ||
+                boardTextBuffer[cur] == 10))
+            {
+            	cur++;
+                // buffer.push(boardTextBuffer[cur])
+            }
+            boardTextObjArr.push({
+            	idx: y * 15 + x,
+                //labelBuffer,
+                // buffer,
+                label: textDecode.decode(new Uint8Array(labelBuffer))
+        	})
+        }
+        
+        info.comment = new Uint8Array(info.comment.buffer, end, info.comment.length - end)
+        
+        const boardTextMap = {};
+        if (boardTextObjArr.length) {
+        	// 根据 trans 翻转参数，idx 现在座标，还原翻转前的座标 并返回
+        	function undoTransPoint(boardWidth, boardHeight, idx, trans) {
+        		const centerX = (boardWidth - 1) / 2;
+        		const centerY = (boardHeight - 1) / 2;
+        		let loop;
+        		loop = (4 - (trans & 0x03)) & 0x03;
+        		while (loop--) { idx = rotate90(centerX, centerY, idx % 15, ~~(idx / 15)) }
+        		if (trans & 0x04) {
+        			idx = reflectX(centerY, idx % 15, ~~(idx / 15));
+        			idx = rotate90(centerX, centerY, idx % 15, ~~(idx / 15))
+        		}
+        		return idx;
+        	}
+        
+        	// 根据 trans 翻转参数, idx 座标，计算翻转后的座标 并返回
+        	const transPoint = undoTransPoint;
+        	// 保存 构建 tDBKey 时 返回的数据, trans 记录翻转参数
+        	const rtObject = { trans: 0 };
+        	// getArray() 要去掉数组最后一位
+        	let position = cBoard.getArray().slice(0, 225);
+        	// 获取 trans
+        	constructDBKey(game.rule, game.boardWidth, game.boardHeight, game.sideToMove, position, rtObject);
+        	const parentTrans = rtObject.trans;
+        	// 把 boardTextObjArr 里的所有座标 转到 当前局面 正确的位置
+        	boardTextObjArr.map(obj => obj.idx = undoTransPoint(game.boardWidth, game.boardHeight, obj.idx, parentTrans))
+        
+        	const strPosition = JSON.stringify(position);
+        	for (let trans = 0; trans < 8; trans++) {
+        		if (trans == 4) {
+        			position = reflectPosition(game.boardWidth, game.boardHeight, position);
+        		}
+        		else if (trans) { // 1,2,3,5,6,7
+        			position = rotatePosition(game.boardWidth, game.boardHeight, position);
+        		}
+        		// 把当前棋局（trans=0 时）和 对称棋局 的座标 加入 boardTextMap
+        		if (JSON.stringify(position) == strPosition) {
+        			boardTextObjArr.map(obj => {
+        				const idx = transPoint(game.boardWidth, game.boardHeight, obj.idx, trans)
+        				boardTextMap[idx] = obj.label;
+        			})
+        		}
+        	}
+        }
+        
+        info.boardTextMap = boardTextMap;
+                    	
+    }
 
     async function inputText(initStr = "") {
         return (await msg({
@@ -496,6 +598,8 @@
         COLOR_NB: 4, // Total number of color on board
         SIDE_NB: 2 // Two side of stones (Black and White)
     };
+    
+    const regExp_EMPTY_LINE_HEARD = /^[\s\0\b\n]*(<br>)*[\s\0\b\n]*(<br>)*/i;
 
     const game = {
     	filename: "",
@@ -612,80 +716,23 @@
                 
                 if (!isEqual(info.position, cBoard.getArray())) return;
                 
-                let boardTextMap = {};
-            	let boardTextObjArr;
                 if (info.comment) {
-                	const _textDecoder = textDecoder || autoDecoder(info.comment) || ENUM_TEXT_DECODERS["gbk"];
-                    const text = _textDecoder.decode(info.comment);
+                	try{
+                	const encodeLabel = getEncodeLabel(info.comment)
+                    const _textDecoder = textDecoder || ENUM_TEXT_DECODERS[encodeLabel];
+                    
                     if (hasBoardText(info.comment)) {
-                    	const end = Math.min(0xFFFFFFFF & text.lastIndexOf("\b"), text.length);
-                    	boardTextObjArr = text.slice(BOARDTEXT_HEARD.length, end)
-                    		.replace(/\0/g, "")
-                    		.split("\n")
-                    		.map(text => {
-                    			const x = parseInt(text.slice(0, 1), 25);
-                    			const y = parseInt(text.slice(1, 2), 25);
-                    			const idx = y * 15 + x;
-                    			return {
-                    				idx: idx,
-                    				label: text.slice(2)
-                    			}
-                    		})
-                    	
-                    	$("comment").innerHTML = text.slice(end) || DBREAD_HELP;
+                    	readBoardText(info, _textDecoder)
                     }
-                    else {
-                    	$("comment").innerHTML = text || DBREAD_HELP;
-                    }
+                    $("comment").innerHTML = (_textDecoder.decode(info.comment) || DBREAD_HELP).replace(regExp_EMPTY_LINE_HEARD,"");
+                    
+                	}catch(e){alert(e.stack)}
                 }
-                else $("comment").innerHTML = DBREAD_HELP;
+                else $("comment").innerHTML = (DBREAD_HELP).replace(regExp_EMPTY_LINE_HEARD,"");
                 
                 //output = "";
                 cBoard.cleLb("all");
-                if (boardTextObjArr) {
-                	// 根据 trans 翻转参数，idx 现在座标，还原翻转前的座标 并返回
-                	function undoTransPoint(boardWidth, boardHeight, idx, trans) {
-                		const centerX = (boardWidth - 1) / 2;
-                		const centerY = (boardHeight - 1) / 2;
-                		let loop;
-                		loop = (4 - (trans & 0x03)) & 0x03;
-                		while (loop--) { idx = rotate90(centerX, centerY, idx % 15, ~~(idx / 15)) }
-                		if (trans & 0x04) {
-                			idx = reflectX(centerY, idx % 15, ~~(idx / 15));
-                			idx = rotate90(centerX, centerY, idx % 15, ~~(idx / 15))
-                		}
-                		return idx;
-                	}
-                	
-                	// 根据 trans 翻转参数, idx 座标，计算翻转后的座标 并返回
-                	const transPoint = undoTransPoint;
-                	// 保存 构建 tDBKey 时 返回的数据, trans 记录翻转参数
-                	const rtObject = {trans: 0};
-                	// getArray() 要去掉数组最后一位
-                	let position = cBoard.getArray().slice(0, 225);
-                	// 获取 trans
-                	constructDBKey(game.rule, game.boardWidth, game.boardHeight, game.sideToMove, position, rtObject);
-                	const parentTrans = rtObject.trans;
-                	// 把 boardTextObjArr 里的所有座标 转到 当前局面 正确的位置
-                	boardTextObjArr.map(obj => obj.idx = undoTransPoint(game.boardWidth, game.boardHeight, obj.idx, parentTrans))
-                	
-                	const strPosition = JSON.stringify(position);
-                	for (let trans = 0; trans < 8; trans++) {
-                		if (trans == 4) {
-                			position = reflectPosition(game.boardWidth, game.boardHeight, position);
-                		}
-                		else if (trans) { // 1,2,3,5,6,7
-                			position = rotatePosition(game.boardWidth, game.boardHeight, position);
-                		}
-                		// 把当前棋局（trans=0 时）和 对称棋局 的座标 加入 boardTextMap
-                		if (JSON.stringify(position) == strPosition) {
-                			boardTextObjArr.map(obj => {
-                				const idx = transPoint(game.boardWidth, game.boardHeight, obj.idx, trans)
-                				boardTextMap[idx] = obj.label;
-                			})
-                		}
-                	}
-                }
+            	const boardTextMap = info.boardTextMap || {};
                 info.records.map(record => {
                 	const label = boardTextMap[record.idx] || readLabel(record.buffer);
                 	cBoard.wLb(record.idx, label, "black");
@@ -931,7 +978,7 @@
 	addEvents();
     mainUI.loadTheme().then(() => mainUI.viewport.resize());
     log("你可以打开Rapfi保存的db棋谱") 
-    $("comment").innerHTML = DBREAD_HELP;
+    $("comment").innerHTML = (DBREAD_HELP).replace(regExp_EMPTY_LINE_HEARD,"");
     //------------------------ support Renlib  ------------------------ 
     
     log("你可以打开db棋谱、lib棋谱") 
@@ -939,7 +986,7 @@
     	newGame: () => cBoard.cle(),
     	cBoard: cBoard,
     	getShowNum: () => true,
-    	outputComment: (text) => $("comment").innerHTML = text || DBREAD_HELP
+    	outputComment: (text) => $("comment").innerHTML = (text || DBREAD_HELP).replace(regExp_EMPTY_LINE_HEARD,"") 
     });
     
     const oldOpenFile = game.openFile;
@@ -980,7 +1027,7 @@
     				})
     			})
     		}
-    		else $("comment").innerHTML = DBREAD_HELP;
+    		else $("comment").innerHTML = (DBREAD_HELP).replace(regExp_EMPTY_LINE_HEARD,"");
     	}
     })
     
