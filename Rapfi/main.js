@@ -620,7 +620,7 @@
                     if (hasBoardText(info.comment)) {
                     	const end = Math.min(0xFFFFFFFF & text.lastIndexOf("\b"), text.length);
                     	boardTextObjArr = text.slice(BOARDTEXT_HEARD.length, end)
-                    		.replaceAll("\0", "")
+                    		.replace(/\0/g, "")
                     		.split("\n")
                     		.map(text => {
                     			const x = parseInt(text.slice(0, 1), 25);
