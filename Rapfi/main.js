@@ -392,7 +392,7 @@
     			i++;
     		} 
     		else if (uint8[i] >= 0x81 && uint8[i] <= 0xFE) {
-    			if (uint8[i + 1] > 0xFE) return 0;
+    			if (uint8[i + 1] == undefined || uint8[i + 1] > 0xFE) return 0;
     			else if (uint8[i + 1] < 0x40) {
     				if (uint8[i + 1] >= 0x30 && uint8[i + 1] <= 0x39 && uint8[i + 3] >= 0x30 && uint8[i + 3] <= 0x39) {
     					i+=4;
@@ -602,14 +602,7 @@
         },
         showBranchNodes: async function() {
             if (this.mode == this.MODE.DATABASS) {
-            	const position = cBoard.getArray();
-                function createKey(idx) {
-        			const _position = position.slice(0);
-                    _position[idx] = game.sideToMove + 1;
-                    return JSON.stringify(constructDBKey(game.rule, game.boardWidth, game.boardHeight, game.sideToMove, _position));
-                }
-                
-                const info = await DBClient.getBranchNodes({
+            	const info = await DBClient.getBranchNodes({
                     rule: game.rule,
                     boardWidth: game.boardWidth,
                     boardHeight: game.boardHeight,
@@ -619,24 +612,26 @@
                 
                 if (!isEqual(info.position, cBoard.getArray())) return;
                 
-                let boardTextMap;
+                let boardTextMap = {};
+            	let boardTextObjArr;
                 if (info.comment) {
                 	const _textDecoder = textDecoder || autoDecoder(info.comment) || ENUM_TEXT_DECODERS["gbk"];
                     const text = _textDecoder.decode(info.comment);
                     if (hasBoardText(info.comment)) {
                     	const end = Math.min(0xFFFFFFFF & text.lastIndexOf("\b"), text.length);
-                    	boardTextMap = {};
-                    	text.slice(BOARDTEXT_HEARD.length, end)
+                    	boardTextObjArr = text.slice(BOARDTEXT_HEARD.length, end)
                     		.replaceAll("\0", "")
                     		.split("\n")
                     		.map(text => {
-                    			const y = parseInt(text.slice(0, 1), 25);
-                    			const x = parseInt(text.slice(1, 2), 25);
+                    			const x = parseInt(text.slice(0, 1), 25);
+                    			const y = parseInt(text.slice(1, 2), 25);
                     			const idx = y * 15 + x;
-                    			const key = createKey(idx);
-                    			//console.log(`${idx}\n${key} ${text.slice(2)}`)
-                    			boardTextMap[key] = text.slice(2);
+                    			return {
+                    				idx: idx,
+                    				label: text.slice(2)
+                    			}
                     		})
+                    	
                     	$("comment").innerHTML = text.slice(end) || DBREAD_HELP;
                     }
                     else {
@@ -647,15 +642,52 @@
                 
                 //output = "";
                 cBoard.cleLb("all");
-                //boardTextMap && console.log(JSON.stringify(boardTextMap, null, 2))
-                boardTextMap ?
+                if (boardTextObjArr) {
+                	// 根据 trans 翻转参数，idx 现在座标，还原翻转前的座标 并返回
+                	function undoTransPoint(boardWidth, boardHeight, idx, trans) {
+                		const centerX = (boardWidth - 1) / 2;
+                		const centerY = (boardHeight - 1) / 2;
+                		let loop;
+                		loop = (4 - (trans & 0x03)) & 0x03;
+                		while (loop--) { idx = rotate90(centerX, centerY, idx % 15, ~~(idx / 15)) }
+                		if (trans & 0x04) {
+                			idx = reflectX(centerY, idx % 15, ~~(idx / 15));
+                			idx = rotate90(centerX, centerY, idx % 15, ~~(idx / 15))
+                		}
+                		return idx;
+                	}
+                	
+                	// 根据 trans 翻转参数, idx 座标，计算翻转后的座标 并返回
+                	const transPoint = undoTransPoint;
+                	// 保存 构建 tDBKey 时 返回的数据, trans 记录翻转参数
+                	const rtObject = {trans: 0};
+                	// getArray() 要去掉数组最后一位
+                	let position = cBoard.getArray().slice(0, 225);
+                	// 获取 trans
+                	constructDBKey(game.rule, game.boardWidth, game.boardHeight, game.sideToMove, position, rtObject);
+                	const parentTrans = rtObject.trans;
+                	// 把 boardTextObjArr 里的所有座标 转到 当前局面 正确的位置
+                	boardTextObjArr.map(obj => obj.idx = undoTransPoint(game.boardWidth, game.boardHeight, obj.idx, parentTrans))
+                	
+                	const strPosition = JSON.stringify(position);
+                	for (let trans = 0; trans < 8; trans++) {
+                		if (trans == 4) {
+                			position = reflectPosition(game.boardWidth, game.boardHeight, position);
+                		}
+                		else if (trans) { // 1,2,3,5,6,7
+                			position = rotatePosition(game.boardWidth, game.boardHeight, position);
+                		}
+                		// 把当前棋局（trans=0 时）和 对称棋局 的座标 加入 boardTextMap
+                		if (JSON.stringify(position) == strPosition) {
+                			boardTextObjArr.map(obj => {
+                				const idx = transPoint(game.boardWidth, game.boardHeight, obj.idx, trans)
+                				boardTextMap[idx] = obj.label;
+                			})
+                		}
+                	}
+                }
                 info.records.map(record => {
-                	const key = createKey(record.idx);
-                    //console.log(`___${record.idx}\n${key}`)
-                	cBoard.wLb(record.idx, boardTextMap[key] || readLabel(record.buffer), "black");
-                }) :
-                info.records.map(record => {
-                	const label = readLabel(record.buffer);
+                	const label = boardTextMap[record.idx] || readLabel(record.buffer);
                 	cBoard.wLb(record.idx, label, "black");
                 })
                 game.rule == Rule.RENJU && game.sideToMove == 0 && info.position.map((v, i) => {
