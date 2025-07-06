@@ -553,7 +553,7 @@
             if (idx + 1 && cBoard.P[idx].type == TYPE_NUMBER) {
                 if (idx != cBoard.MS[cBoard.MSindex]) {
                     while (cBoard.MS[cBoard.MSindex] != idx && cBoard.MSindex > - 1) {
-                        cBoard.cleNb(cBoard.MS[cBoard.MSindex], true);
+                        cBoard.cleNb(cBoard.MS[cBoard.MSindex], true, 100);
                     }
                 }
             }
