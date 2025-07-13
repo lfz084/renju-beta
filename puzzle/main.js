@@ -725,6 +725,34 @@
 			game.data && game.data.time == data.time && (li.style.borderWidth = "5px");
 		}
 		
+		const loadItems = (function() {
+			let time = 0;
+			let busy = false;
+			return async function(cmd) {
+				if (busy) return;
+				busy = true;
+				time = Date.now();
+				setTimeout(() => {if(t==time) busy = false}, 3000);
+				
+				removeItemAll();
+				if (cmd == "defaultPuzzles") {
+					await loadDeafultItems(data => -1 == data.title.indexOf("每日") && -1 == data.title.indexOf("错题"));
+				}
+				else if (cmd == "daysPuzzles") {
+					await loadDeafultItems(data => data.title.indexOf("每日") + 1 || data.title.indexOf("错题") + 1);
+				}
+				else if (cmd == "userPuzzles") {
+					await loadUserAddedItems();
+				}
+				else {
+					await loadDeafultItems();
+					await loadUserAddedItems();
+				}
+				createIOBtns();
+				busy = false;
+			}
+		})()
+		
 		async function loadDeafultItems(filter = () => true) {
 			for (let i = 0; i < game.defaultPuzzleTimes.length; i++) {
 				const data = await puzzleData.getDataByIndex("time", game.defaultPuzzleTimes[i]);
@@ -743,9 +771,7 @@
 			if (!itemBoard.viewElem.parentNode) {
 				itemBoard.show();
 				mainUI.viewport.resize();
-				await loadDeafultItems();
-				await loadUserAddedItems();
-				createIOBtns();
+				await loadItems("allPuzzles");
 			}
 		}
 		
@@ -824,19 +850,28 @@
 		const btnDailyPuzzles = document.createElement("div");
 		btnDailyPuzzles.innerHTML = "每日题集";
 		Object.assign(btnDailyPuzzles.style, itemButStyle);
-		btnDailyPuzzles.onclick = async () => { event.cancelBubble = true; removeItemAll(); await loadDeafultItems(data => data.title.indexOf("每日") + 1 || data.title.indexOf("错题") + 1); createIOBtns()}
+		btnDailyPuzzles.onclick = async () => { 
+			event.cancelBubble = true;
+			loadItems("daysPuzzles")
+		}
 		
 		const btnDefault = document.createElement("div");
 		btnDefault.innerHTML = "默认题集";
 		itemButStyle.left = itemButWidth * 1 + "px";
 		Object.assign(btnDefault.style, itemButStyle);
-		btnDefault.onclick = async () => { event.cancelBubble = true; removeItemAll(); await loadDeafultItems(data => -1 == data.title.indexOf("每日") && -1 == data.title.indexOf("错题")); createIOBtns()}
+		btnDefault.onclick = async () => { 
+			event.cancelBubble = true;
+			loadItems("defaultPuzzles")
+		}
 		
 		const btnUserAdded = document.createElement("div");
 		btnUserAdded.innerHTML = "你的题集";
 		itemButStyle.left = itemButWidth * 2 + "px";
 		Object.assign(btnUserAdded.style, itemButStyle);
-		btnUserAdded.onclick = async () => { event.cancelBubble = true; removeItemAll(); await loadUserAddedItems(); createIOBtns()}
+		btnUserAdded.onclick = async () => { 
+			event.cancelBubble = true;
+			loadItems("userPuzzles")
+		}
 		
 		const buttons = document.createElement("div");
 		buttons.appendChild(btnDailyPuzzles)
@@ -862,6 +897,7 @@
 				borderWidth: `${boardWidth}px`
 			}
 		})
+
 		itemBoard.viewElem.appendChild(buttons)
 		itemBoard.hide();
 		mainUI.addChild({
@@ -882,6 +918,7 @@
 				borderStyle: "solid",
 				borderWidth: `${boardWidth}px`
 			}
+
 		})
 		indexBoard.hide();
 		indexBoard.callback = function(index) { 

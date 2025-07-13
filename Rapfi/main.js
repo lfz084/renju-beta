@@ -23,7 +23,7 @@
     
     let linkString = "";
     for(let i = 0; i < links.length; i++) {
-    	if (links[i].url) linkString += `<a onclick='window.game.downloadFile("${links[i].url}?cache=netFirst")'>${links[i].title}</a><br>`;
+    	if (links[i].url) linkString += `<a onclick='window.game.downloadFile("${links[i].url}")'>${links[i].title}</a><br>`;
     	if (links[i].href) linkString += `<a href="${links[i].href}" target="${links[i].target}">${links[i].title}</a><br>`;
     }
 
@@ -666,9 +666,10 @@
             try {
                 const response = await fetch(url + "?cache=netFirst");
                 if (!response.ok) {
-                    alert("网络卡顿 文件下载失败 请重新下载");
-                    return;
+                	(window.msg || alert)("网络不给力 请稍后点击下载");
+                	return;
                 }
+                
                 const blob = await response.blob();
                 const file = new File([blob], getFileName(url));
                 await this.openFile(file);
