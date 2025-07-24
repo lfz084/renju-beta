@@ -563,12 +563,32 @@ window.puzzleAI = (() => {
 				const side = game.board.getArray()[idx];
 				const sw = side == game.playerSide ? 1 : -1;
 				engine.gameRules != RENJU_RULE[game.puzzle.rule] && (engine.gameRules = RENJU_RULE[game.puzzle.rule]);
-				let state = getGameOver(game.board.getArray(), side, idx);
-				state == 0 && game.board.getArray().filter(v => v == 0).length == 0 && (state = -3 * sw)
-				state = state * sw;
-				const GAME_STATE = {"0": game.STATE.PLAYING, "1": game.STATE.WIN, "-1": game.STATE.LOST, "-2": game.STATE.LOST, "-5": game.STATE.LOST}
-				const COMMENT = {"1": "你赢了", "-1": "你输了", "-2": "你禁手犯规，输了"}
-				const WARN = {"1": "你赢了", "-1": "你输了", "-2": "禁手犯规"}
+				const state = sw * getGameOver(game.board.getArray(), side, idx);
+				const GAME_STATE = {
+					"0": game.STATE.PLAYING,
+					"1": game.STATE.WIN,
+					"-1": game.STATE.LOST,
+					"2": game.STATE.WIN,
+					"-2": game.STATE.LOST,
+					"3": game.STATE.LOST,
+					"-3": game.STATE.LOST
+				}
+				const COMMENT = {
+					"1": "你赢了",
+					"-1": "你输了",
+					"2": "对手禁手犯规，你赢了",
+					"-2": "你禁手犯规，输了",
+					"3": "棋规已满，平局",
+					"-3": "棋盘已满，平局"
+				}
+				const WARN = {
+					"1": "你赢了",
+					"-1": "你输了",
+					"2": "禁手犯规",
+					"-2": "禁手犯规",
+					"3": "棋规已满",
+					"-3": "棋规已满"
+				}
 				state && processOutput({ state: GAME_STATE[state], sideLabel: "棋局结束", comment: COMMENT[state], warn: WARN[state]});
 			}
 		}
@@ -591,12 +611,13 @@ window.puzzleAI = (() => {
 			const isRight = selectPoints.length == options.length &&  0 == options.map(idx => selectPoints.indexOf(idx)).filter(index => index < 0).length;
 			if (isRight) {
 				const comment = "回答正确";
-				processOutput({ state: game.STATE.WIN, sideLabel: "回答正确", comment})
+				processOutput({ state: game.STATE.WIN, sideLabel: comment, warn: comment, comment})
 			}
 			else {
 				const errorPoints = selectPoints.filter(idx => options.indexOf(idx) == -1);
 				const comment = `解题失败\n${errorPoints.length && errorPoints.length + "处错误\n" || ""}${lastCount && lastCount + "处漏选\n" || ""}`;
-				processOutput({ state: game.STATE.LOST, sideLabel: "解题失败", comment, errorPoints: errorPoints})
+				const label = `解题失败`;
+				processOutput({ state: game.STATE.LOST, sideLabel: label, warn: label, comment, errorPoints: errorPoints})
 			}
 			aiState = aiState & ~STATE_RENJU_THINKING;
 		}

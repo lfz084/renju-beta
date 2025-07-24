@@ -18,13 +18,12 @@
 		const warn = (function() {
 			const titleDiv = document.createElement("div");
 			const fontSize = ~~(mainUI.gridWidth / 15);
+			const height = fontSize * 3;
 			Object.assign(titleDiv.style, {
 				position: "absolute",
-				left: `${fontSize * 2}px`,
-				top: `${(mainUI.gridWidth - fontSize * 2) >> 1}px`,
-				width: `${mainUI.gridWidth - fontSize * 4}px`,
-				height: `${fontSize * 2}px`,
-				lineHeight: `${fontSize * 2}px`,
+				top: `${(mainUI.gridWidth - height) >> 1}px`,
+				height: `${height}px`,
+				lineHeight: `${height}px`,
 				fontSize: `${fontSize}px`,
 				textAlign: "center",
 				zIndex: 999999
@@ -34,16 +33,21 @@
 			function open(timeout) {
 				timeEnd = Date.now() + timeout;
 				!timer && (timer = setInterval(() => Date.now() > timeEnd && close(), 50));
-				mainUI.upDiv.appendChild(titleDiv);
+				!titleDiv.parentNode && mainUI.upDiv.appendChild(titleDiv);
+				titleDiv.setAttribute("class", "show")
 			}
 			function close() {
 				clearInterval(timer);
 				timer = 0;
-				titleDiv.parentNode && titleDiv.parentNode.removeChild(titleDiv);
+				titleDiv.setAttribute("class", "hide")
 			}
 			return function(title, timeout = 1500) {
 				titleDiv.innerText = title;
+				const width = fontSize * `${title}`.length + fontSize;
+				const left = (mainUI.gridWidth - width) / 2;
 				Object.assign(titleDiv.style, {
+					left: `${left}px`,
+					width: `${width}px`,
 					color: document.body.style.color,
 					backgroundColor: document.body.style.backgroundColor,
 					opacity: "0.937"
