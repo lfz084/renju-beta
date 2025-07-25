@@ -376,7 +376,10 @@
 				varName: "btnAIHelp",
 				type: "button",
 				text: "求助 AI",
-				touchend: function() { this.enabled = false; game.state == game.STATE.PLAYING && game.board.MSindex % 2 && puzzleAI.aiHelp(game); }
+				touchend: function() {
+					this.enabled = false;
+					game.aiHelp();
+				}
 		},
 			{
 				varName: "btnOpenPuzzles",
@@ -399,6 +402,26 @@
 				touchend: function() {
 					this.hide();
 					puzzleAI.checkWinBASE(game);
+				},
+				reset: function() {
+					setTimeout(() => {
+						this.move(btnReset.left, btnReset.top);
+					}, 100)
+				}
+			},
+			{
+				varName: "btnAIDefance",
+				type: "button",
+				text: "AI 思考",
+				touchend: function() {
+					this.enabled = false;
+					(game.state & game.STATE.GAMEOVER) == game.STATE.GAMEOVER
+					&& game.think();
+				},
+				reset: function() {
+					setTimeout(() => {
+						this.move(btnAIHelp.left, btnAIHelp.top);
+					}, 100)
 				}
 			}
 		];
@@ -702,6 +725,7 @@
 			btnNext,
 			btnReset,
 			btnCommit,
+			btnAIDefance,
 			btnRule,
 			btnMode,
 			btnRotate,
@@ -720,7 +744,7 @@
 			btnSize,
 			miniBoard
 		} = mainUI.getChildsForVarname();
-		btnCommit.move(btnReset.left, btnReset.top);
+		
 		const boardWidth = 5;
 		const fontSize = mainUI.buttonHeight * 0.6;
 		const liHeight = mainUI.buttonHeight * 1.2;
@@ -976,7 +1000,6 @@
 			const hash = `${puzzleData.puzzle2URL(puzzle)}`;
 			const url = window.location.href.split(/[?#]/)[0] + `#${hash}`;
 			window.location.hash = hash;
-			//log(`share URL: ${url}`);
 			if (navigator.canShare) {
 				navigator.share({
 					title: "连珠答题器",
@@ -1164,10 +1187,6 @@
 			lbTimer.stop();
 		}
 		
-		const delayAIHelp = createDelayCallback(() => showAIHelp());
-		
-		const delayCheckWinBASE = createDelayCallback(() => puzzleAI.checkWinBASE(game));
-		
 		const delaySaveProgress = createDelayCallback(() => {
 			game.timer = lbTimer.getTimer();
 			puzzleData.saveProgress(game);
@@ -1211,13 +1230,6 @@
 					&& (this.puzzle.mode = puzzleCoder.MODE.FREE)
 				}
 
-				const isLocation = 0 && window.location.href.indexOf("http://") > -1;
-				const completed = this.completed;
-				const delay = this.puzzle.delayHelp * 60 * 1000;
-				const isTimeout = (this.data && this.data[puzzleData.INDEX.TIMERS] && this.data[puzzleData.INDEX.TIMERS][this.puzzles.index] || 0) > delay;
-				if(puzzle == undefined) {
-					(isLocation || completed || isTimeout) ? showAIHelp() : hideAIHelp();
-				}
 				await this.stopThinking();
 				this.strength = this._strength;
 				this.notRotate = this._notRotate;
@@ -1246,10 +1258,11 @@
 						coordinateLabel: "****",
 					})
 					html += `这是封面，请跳到下一题再开始解题\n\n`,
-					this.puzzle.title = this.puzzle.title + "（封面）" ;
 					btnAIHelp.enabled = false;
 					this.board.setCoordinate(0);
+					this.board.canvas.style.opacity = 1;
 					this.puzzle.image && (this.board.loadImgURL(this.puzzle.image).then(() => this.board.putImg()), this.board.canvas.style.opacity = 0.5);
+					this.puzzle.title = this.puzzle.title + "（封面）" ;
 				}
 				else {
 					this.state = this.STATE.PLAYING;
@@ -1259,20 +1272,26 @@
 						sideLabel_01: [,"黑先","白先"][this.playerSide],
 						coordinateLabel: "坐标",
 					})
-					warn(`${sideLabel_01.innerHTML} ${modeStr.replace("模式","").replace("自由对弈","胜")}`)
 					html += `难度: ${"★★★★★".slice(0, this.puzzle.level)}\n`;
 					html += `玩家: ${[,"● 黑棋","○ 白棋"][this.playerSide]}\n`;
 					html += `规则: ${ruleStr}\n`;
 					html += `模式: ${modeStr}\n\n`;
+					btnAIHelp.enabled = true;
 					this.board.setCoordinate(this.coordinateType);
 					this.board.canvas.style.opacity = 1;
 					(this.puzzle.randomRotate || rotate != undefined) && !this.notRotate ? this.randomRotate(rotate) : (this.rotate = 0);
 					this.puzzle.rotate = this.rotate;
-					btnAIHelp.enabled = true;
-					//this.board.printSide(this.playerSide);
-					//!isLocation && (this.puzzle.mode & 0xE0) == puzzleCoder.MODE.BASE &&  delayCheckWinBASE(1800);
+					warn(`${sideLabel_01.innerHTML} ${modeStr.replace("模式","").replace("自由对弈","胜")}`)
 				}
+
+				const isLocation = 0 && window.location.href.indexOf("http://") > -1;
+				const completed = this.completed;
+				const delay = this.puzzle.delayHelp * 60 * 1000;
+				const isTimeout = (this.data && this.data[puzzleData.INDEX.TIMERS] && this.data[puzzleData.INDEX.TIMERS][this.puzzles.index] || 0) > delay;
+				(isLocation || completed || isTimeout) ? showAIHelp() : hideAIHelp();
+				
 				(this.puzzle.mode & 0xE0) == puzzleCoder.MODE.BASE ? btnCommit.show() : btnCommit.hide();
+				
 				html += this.puzzle.comment || "";
 				html += this.state == this.STATE.PLAYING ? (this.puzzle.mode & 0xE0) == puzzleCoder.MODE.BASE ? "\n\n开始答题......\n点击空格：标记选点\n点击标记：删除选点\n答题结束后提交答案" : "\n\n开始解题......\n单击：两次确认落子\n双击：直接落子" : "";
 				html += this.state == this.STATE.PLAYING && lbTimer.viewElem.parentNode ? `\n\n坚持答题${this.puzzle.delayHelp}分钟后......\n解锁"求助AI"按钮` : "";
@@ -1345,9 +1364,14 @@
 					this.reset();
 				}
 			},
+			aiHelp() {
+				this.state == this.STATE.PLAYING 
+				&& this.board.MSindex % 2 
+				&& puzzleAI.aiHelp(this);
+			},
 			think() {
 				const isBase = (this.puzzle.mode & 0xE0) == puzzleCoder.MODE.BASE;
-				this.state == this.STATE.PLAYING && (!isBase || !this.options) && puzzleAI.think(this);
+				!isBase && puzzleAI.think(this);
 			},
 			async stopThinking() {
 				await puzzleAI.stopThinking(this);
@@ -1373,13 +1397,13 @@
 				this.state == this.STATE.PLAYING && await puzzleAI.checkMove(this, idx);
 			},
 			async aiPutStone(idx) {
-				if ((this.state & this.STATE.GAMEOVER) == this.STATE.GAMEOVER) return;
+				//if ((this.state & this.STATE.GAMEOVER) == this.STATE.GAMEOVER) return;
 				await this.putStone(idx);
 				await this.checkWin(idx);
 				btnAIHelp.enabled = true;
 			},
 			async playerPutStone(idx) {
-				if ((this.state & this.STATE.GAMEOVER) == this.STATE.GAMEOVER) return;
+				//if ((this.state & this.STATE.GAMEOVER) == this.STATE.GAMEOVER) return;
 				await this.putStone(idx);
 				await this.checkWin(idx);
 				this.state == this.STATE.PLAYING && this.think()
@@ -1483,12 +1507,19 @@
 					canvasDblClick = canvasDblClick_playing;
 					canvasDblTouchStart = canvasDblTouchStart_playing;
 					canvasContextMenu = canvasContextMenu_playing;
+					lbTimer.show();
+					btnAIHelp.hide();
+					btnAIDefance.hide()
 				}
 				else if ((this._state & 0xF0) == this.STATE.GAMEOVER) {
 					canvasClick = canvasClick_gameover;
 					canvasDblClick = canvasDblClick_gameover;
 					canvasDblTouchStart = canvasDblTouchStart_gameover;
 					canvasContextMenu = canvasContextMenu_gameover;
+					lbTimer.hide();
+					btnAIHelp.hide();
+					btnAIDefance.show();
+					btnAIDefance.enabled = false
 				}
 				this.board.hideStone();
 				return this._state;
@@ -1572,7 +1603,6 @@
 							!(game.data && game.data.title == "错题复习") && puzzleData.addErrorPuzzle(game);
 						}
 						if (game.state == game.STATE.WIN) {
-							showAIHelp();
 							puzzleData.saveProgress(game);
 							game.focusMode && setTimeout(() => game.next(), 1000)
 						}
@@ -1601,7 +1631,7 @@
 
 		function outputInnerHTML(param) {
 			const labels = { title, starLabel, coordinateLabel, strengthLabel, rotateLabel, progressLabel, progressLabel_01, sideLabel, sideLabel_01, ruleLabel, ruleLabel_01, modeLabel, modeLabel_01, comment };
-			Object.keys(param).map(key => labels[key] && (/*log(param[key], "warn"), */labels[key].innerHTML = replaceAll(param[key], "\n", "<br>")));
+			Object.keys(param).map(key => labels[key] && (labels[key].innerHTML = replaceAll(param[key], "\n", "<br>")));
 		}
 
 		function playerTryPutStone(idx) {
@@ -1869,7 +1899,7 @@
 		}
 		
 		function canvasClick_playing(x, y) {
-			//log("canvasClick_playing")
+			log("canvasClick_playing")
 			const idx = cBoard.getIndex(x, y);
 			if (game.state == game.STATE.PLAYING) {
 				if (game.puzzle.mode < puzzleCoder.MODE.BASE) {
@@ -1906,13 +1936,11 @@
 		}
 
 		function canvasDblClick_playing(x, y) {
-			//log("canvasDblClick_playing")
+			log("canvasDblClick_playing")
 			const idx = cBoard.getIndex(x, y);
 			if (idx < 0 || (cBoard.MSindex + 1 + (cBoard.firstColor == "black" ? 0 : 1)) % 2 + 1 == game.aiSide || game.state != game.STATE.PLAYING) return;
 			if (game.puzzle.mode < puzzleCoder.MODE.BASE) {
 				playerTryPutStone(idx);
-				//cBoard.hideStone();
-				//cBoard.P[idx].type == TYPE_EMPTY && game.playerPutStone(idx);
 			}
 			else {
 			}
@@ -2014,7 +2042,11 @@
 					})
 				}
 			}
-			//game.board.printSide(game.side);
+			if ((game.state & game.STATE.GAMEOVER) == game.STATE.GAMEOVER) {
+				if (game.puzzle.mode < puzzleCoder.MODE.BASE) {
+					btnAIDefance.enabled = (this.MSindex + 1) & 1;
+				}
+			}
 		}
 
 		addEvents();
