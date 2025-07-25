@@ -462,6 +462,7 @@
 						if (1 & localStorage.getItem("egg")) {
 							loadScript("UI/codeboard.js")
 								.then(() => this.show())
+								.then(() => mainUI.loadTheme())
 						}
 					}, 100)
 				}
