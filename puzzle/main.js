@@ -423,7 +423,50 @@
 						this.move(btnAIHelp.left, btnAIHelp.top);
 					}, 100)
 				}
+			},
+			{
+				varName: "btnCode",
+				type: "button",
+				text: "输出代码",
+				touchend: function() {
+					const blackStones = [];
+					const whiteStones = [];
+					cBoard.getArray().map((v, i) => {
+						v == 1 && blackStones.push(i);
+						v == 2 && whiteStones.push(i);
+					})
+					if (blackStones.length != whiteStones.length) {
+						const stonesShort = blackStones.length < whiteStones.length ? blackStones : whiteStones;
+						const stonesLong = blackStones.length > whiteStones.length ? blackStones : whiteStones;
+						for (let i = stonesLong.length - stonesShort.length; i > 0; i--) {
+							stonesShort.push(225)
+						}
+						stonesShort === whiteStones && stonesShort.length--
+					}
+					const stones = new Array(blackStones.length + whiteStones.length).fill(-1);
+					stones.map((v, i) => {
+						if (i & 1) {
+							stones[i] = whiteStones[i >> 1];
+						}
+						else {
+							stones[i] = blackStones[i >> 1];
+						}
+					})
+					const codeURL = `${cBoard.points2MoveCode(stones)}&&&${cBoard.size}&`;
+					codeboard.open(codeURL, cBoard.size)
+				},
+				reset: function() {
+					setTimeout(() => {
+						this.move(btnShareURL.left, btnShareURL.top);
+						this.hide();
+						if (1 & localStorage.getItem("egg")) {
+							loadScript("UI/codeboard.js")
+								.then(() => this.show())
+						}
+					}, 100)
+				}
 			}
+
 		];
 		
 		gameButtonSettings.splice(1,0,null,null,null);
@@ -720,6 +763,7 @@
 			progressLabel,
 			progressLabel_01,
 			comment,
+			btnShareURL,
 			btnAIHelp,
 			btnPrevious,
 			btnNext,
