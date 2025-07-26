@@ -72,19 +72,17 @@ fetch(url)
             width: wdWidth + "px",
             height: wdHeight + "px",
             top: wdTop,
-            left: wdLeft,
-            backgroundColor: backgroundColor,
-            border: `0px solid `
+            left: wdLeft
         })
         const fontSize = ~~(wdWidth / 20);
-        const textWidth = ~~(wdWidth - 10 * 2);
+        const textWidth = ~~(wdWidth);
         const textHeight = textWidth;
         Object.assign(textarea.style, {
             position: "absolute",
             width: textWidth + "px",
             height: textHeight + "px",
-            top: 10 + "px",
-            left: 10 + "px",
+            top: "0px",
+            left: "0px",
             backgroundColor: textareaBackgroundColor,
             border: `5px solid black`,
             fontSize: fontSize + "px",
