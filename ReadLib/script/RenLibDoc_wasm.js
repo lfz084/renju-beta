@@ -517,7 +517,7 @@
         function getInnerHTMLInfo(pBuffer) {
             let innerHTML = getComment(getUINT(pBuffer)),
                 depth = getINT(pBuffer + 4);
-            innerHTML && (innerHTML = `<br><br>${innerHTML.split("\n").join("<br>")}<br><br>`);
+            innerHTML && (innerHTML = `<br><br>${innerHTML.split(/[\b\n]/).join("<br>")}<br><br>`);
             return { innerHTML: innerHTML, depth: depth };
         }
 
