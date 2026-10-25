@@ -826,7 +826,7 @@ window.puzzleCoder = (() => {
 				const code = `${puzzle.stones}{${puzzle.blackStones}}{${puzzle.whiteStones}}`;
 				cBoard.unpackCode(code, undefined, true);
 				const game = cBoard.getArray();
-				const keys = ["stones", "blackStones", "whiteStones", "labels", "options", "title", "comment"];
+				const keys = ["stones", "blackStones", "whiteStones", "mode", "labels", "options", "title", "comment"];
 				keys.map(key => puzzle[key] && (game[key] = puzzle[key]));
 				games.push(game)
 			}

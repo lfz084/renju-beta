@@ -843,23 +843,47 @@ window.mainUI = (function() {
 	class TextBox extends viewElem {
 		constructor(left = 0, top = 0, width = 500, height = 500) {
 			super(left, top, width, height, undefined, "textarea");
+			
 			this.div = document.createElement("div");
+			this.isTouch = false;
+			this.viewElem.addEventListener("focus", () => {
+				this.viewElem.style.opacity = this.opacity || "1";
+			})
+			this.viewElem.addEventListener("focusout", () => {
+				this.checkValue();
+			})
+			this.viewElem.addEventListener("change", () => {
+				this.checkValue();
+			})
+			this.viewElem.addEventListener("touchend", () => {
+				this.isTouch = true;
+				setTimeout(()=>this.isTouch=false, 500);
+			})
 			this.viewElem.addEventListener("click", () => {
+				if(!this.isTouch) return;
 				this.viewElem.scrollIntoView(false);
 				this.showDiv();
-			})
-			this.viewElem.addEventListener("input", () => {
-				//this.viewElem.scrollIntoView(false);
-				this.showDiv()
 			})
 			this.div.addEventListener("click", () => {
 				this.hideDiv()
 			})
+			
+			this.bgTextArea = document.createElement("textarea");
+			Object.assign(this.bgTextArea.style, {left, top, width, height});
+			const parentNode = this.viewElem.parentNode;
+			if(parentNode) {
+				parentNode.removeChild(this.viewElem);
+				parentNode.appendChild(this.bgTextArea);
+				parentNode.appendChild(this.viewElem);
+			}
 		}
 		get value() { return this.viewElem.value || "" }
-		set value(text) { this.viewElem.value = text }
+		set value(text) { this.viewElem.value = text; this.checkValue() }
+		get backgroundText() { return this.bgTextArea.value || "" }
+		set backgroundText(text) { this.bgTextArea.value = text; }
 	}
 	
+	/* 打开防误触 */
 	TextBox.prototype.showDiv = function() {
 		if (this.div.parentNode) return;
 		document.body.appendChild(this.div);
@@ -875,8 +899,66 @@ window.mainUI = (function() {
 		})
 	}
 	
+	/* 关闭防误触 */
 	TextBox.prototype.hideDiv = function() {
 		this.div.parentNode && this.div.parentNode.removeChild(this.div);
+	}
+
+	TextBox.prototype.checkValue = function() {
+		if (this.value) {
+			this.viewElem.style.opacity = this.opacity || "1";
+		}
+		else {
+			this.viewElem.style.opacity = "0";
+		}
+	}
+	
+	TextBox.prototype.move = function(left = this.left, top = this.top, width = this.width, height = this.height, parent = this.parent, conver = false) {
+		if (conver && this.viewElem.parentNode) {
+			const p = xyLeftToRight({ x: left, y: top }, this.viewElem.parentNode, parent);
+			left = p.x;
+			top = p.y;
+		}
+		this.parent = parent;
+		this.left = left;
+		this.top = top;
+		this.width = width;
+		this.height = height;
+		
+		const elems = [this.bgTextArea, this.viewElem];
+		for (let elem of elems) {
+			const s = elem.style;
+			s.position = "absolute";
+			s.left = `${this.left}px`;
+			s.top = `${this.top}px`;
+			s.width = `${this.width}px`;
+			s.height = `${this.height}px`;
+			(!elem.parentNode || elem.parentNode != this.parent) && this.parent.appendChild(elem);
+		}
+	}
+
+	TextBox.prototype.style = function(style = {}) {
+		const elems = [this.bgTextArea, this.viewElem];
+		for (let elem of elems) {
+			for (let key in style) {
+				elem.style[key] = style[key];
+			}
+		}
+		style.opacity && (this.opacity = style.opacity);
+	}
+
+	TextBox.prototype.show = function() {
+		const elems = [this.bgTextArea, this.viewElem];
+		for (let elem of elems) {
+			!elem.parentNode && this.parent.appendChild(elem);
+		}
+	}
+
+	TextBox.prototype.hide = function() {
+		const elems = [this.bgTextArea, this.viewElem];
+		for (let elem of elems) {
+			elem.parentNode && elem.parentNode.removeChild(elem);
+		}
 	}
 	
 	function newTextBox(param = {}) {
